@@ -315,7 +315,6 @@ dependencies = [
 [[package]]
 name = "bridge-encodings"
 version = "0.1.0"
-source = "git+https://github.com/Rick-Wilson/bridge-encodings#c969019aea21eaa255894d1381ec569787e54cc2"
 dependencies = [
  "bridge-types",
  "thiserror",
@@ -324,7 +323,6 @@ dependencies = [
 [[package]]
 name = "bridge-parsers"
 version = "0.1.0"
-source = "git+https://github.com/Rick-Wilson/Bridge-Parsers#c386a57afc920d1f2dc9ea4196e2914d60a3c01c"
 dependencies = [
  "anyhow",
  "bridge-encodings",
@@ -347,7 +345,6 @@ dependencies = [
 [[package]]
 name = "bridge-solver"
 version = "0.4.0"
-source = "git+https://github.com/Rick-Wilson/bridge-solver#dcdabe3fcd9b75fb55e2d2b1af2a10819570c207"
 dependencies = [
  "bridge-types",
 ]
@@ -355,11 +352,10 @@ dependencies = [
 [[package]]
 name = "bridge-types"
 version = "0.1.0"
-source = "git+https://github.com/Rick-Wilson/bridge-types#a1272c0605d198df64b0cf0eae593a0d56ef1b37"
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.8.52"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -825,7 +821,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2265,8 +2261,7 @@ dependencies = [
 
 [[package]]
 name = "pbn-to-pdf"
-version = "0.15.0"
-source = "git+https://github.com/Rick-Wilson/pbn-to-pdf#5a5e10053692ab6664dcf25f5d9103752da1acc5"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "bridge-types",
@@ -2947,7 +2942,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3488,7 +3483,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

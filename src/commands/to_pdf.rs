@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Args as ClapArgs, ValueEnum};
-use pbn_to_pdf::{parse_pbn, render_boards, Layout as PdfLayout};
+use pbn_to_pdf::{parse_pbn, render_boards, Layout as PdfLayout, RenderOptions};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, ValueEnum, Default)]
@@ -52,6 +52,18 @@ pub struct Args {
     /// Board range to include (e.g., "1-4" or "1,3,5")
     #[arg(short = 'r', long)]
     pub board_range: Option<String>,
+
+    /// Circle sure winners in red (declarer's plan layouts; priority 1)
+    #[arg(long)]
+    pub circle_sure_winners: bool,
+
+    /// Circle promotable winners in green (declarer's plan layouts; priority 2)
+    #[arg(long)]
+    pub circle_promotable_winners: bool,
+
+    /// Circle length winners in blue (declarer's plan layouts; priority 3)
+    #[arg(long)]
+    pub circle_length_winners: bool,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -92,8 +104,14 @@ pub fn run(args: Args) -> Result<()> {
         return Err(anyhow::anyhow!("No boards to render after filtering"));
     }
 
+    let options = RenderOptions {
+        circle_sure_winners: args.circle_sure_winners,
+        circle_promotable_winners: args.circle_promotable_winners,
+        circle_length_winners: args.circle_length_winners,
+    };
+
     // Generate PDF using the high-level API
-    let pdf_bytes = render_boards(&boards, &metadata_comments, args.layout.into())
+    let pdf_bytes = render_boards(&boards, &metadata_comments, args.layout.into(), options)
         .map_err(|e| anyhow::anyhow!("Failed to generate PDF: {:?}", e))?;
 
     // Determine output path
