@@ -403,9 +403,9 @@ bridge-wrangler event -i raw.pbn -e "Spring Sectional" -o tournament.pbn
 ## Dependencies
 
 This tool uses:
-- [bridge-parsers](https://github.com/Rick-Wilson/Bridge-Parsers) - PBN parsing
-- [pbn-to-pdf](https://github.com/Rick-Wilson/pbn-to-pdf) - PDF generation
-- [bridge-solver](https://github.com/Rick-Wilson/Dealer3) - Double-dummy analysis
+- [bridge-parsers](https://github.com/bridge-craftwork/Bridge-Parsers) - PBN parsing
+- [pbn-to-pdf](https://github.com/bridge-craftwork/pbn-to-pdf) - PDF generation
+- [bridge-solver](https://github.com/bridge-craftwork/Dealer3) - Double-dummy analysis
 
 ## License
 
