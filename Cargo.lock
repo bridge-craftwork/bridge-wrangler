@@ -359,7 +359,7 @@ source = "git+https://github.com/bridge-craftwork/bridge-types#6159bd7ba3a5c4ab8
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.38"
+version = "0.9.40"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -2266,8 +2266,8 @@ dependencies = [
 
 [[package]]
 name = "pbn-to-pdf"
-version = "0.17.0"
-source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#7e59a1b7f463d1fe036f253ac5e67c8b4d8c47b5"
+version = "0.17.1"
+source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#802a5020340b9d4ce7d7c7825358318abd760fee"
 dependencies = [
  "anyhow",
  "bridge-types",
@@ -2946,9 +2946,9 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc-hash"
-version = "2.1.2"
+version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94300abf3f1ae2e2b8ffb7b58043de3d399c73fa6f4b73826402a5c457614dbe"
+checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
 
 [[package]]
 name = "rustc_version"
@@ -3384,7 +3384,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38803281d1c23166c5ebcb455439a5d2afe711cc909cf88af72448c297756ad6"
 dependencies = [
  "kurbo 0.13.1",
- "rustc-hash 2.1.2",
+ "rustc-hash 2.1.3",
  "skrifa",
  "write-fonts",
 ]
