@@ -178,9 +178,9 @@ checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
 
 [[package]]
 name = "arrayvec"
-version = "0.7.7"
+version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f02882884d3e1bc524fb12c79f107f6ad0e1cfd498c536ffb494301740995dfe"
+checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
 name = "atomic-waker"
@@ -315,7 +315,7 @@ dependencies = [
 [[package]]
 name = "bridge-encodings"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-encodings#fb507de2131b0ceb1d43952929f05cd92e6583c9"
+source = "git+https://github.com/bridge-craftwork/bridge-encodings#725bc341143d99ebe819e677b6380ecf26379047"
 dependencies = [
  "bridge-types",
  "thiserror",
@@ -355,11 +355,11 @@ dependencies = [
 [[package]]
 name = "bridge-types"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-types#d2799c6b846e972ad0adc510fff65133f9a09eeb"
+source = "git+https://github.com/bridge-craftwork/bridge-types#6159bd7ba3a5c4ab8f14510df6194300f17bbb88"
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.37"
+version = "0.9.38"
 dependencies = [
  "anyhow",
  "bridge-parsers",
