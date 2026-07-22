@@ -1,6 +1,6 @@
 [package]
 name = "bridge-wrangler"
-version = "0.9.59"
+version = "0.9.60"
 edition = "2021"
 description = "CLI tool for operations on bridge PBN files"
 license = "Unlicense"
