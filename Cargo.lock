@@ -359,7 +359,7 @@ source = "git+https://github.com/bridge-craftwork/bridge-types#bc8c5a171eef03f5c
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.59"
+version = "0.9.60"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -2975,9 +2975,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-pki-types"
-version = "1.15.0"
+version = "1.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "764899a24af3980067ee14bc143654f297b22eaebfe3c7b6b211920a5a59b046"
+checksum = "2f4925028c7eb5d1fcdaf196971378ed9d2c1c4efc7dc5d011256f76c99c0a96"
 dependencies = [
  "zeroize",
 ]
