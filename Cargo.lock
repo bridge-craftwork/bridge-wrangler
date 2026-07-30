@@ -315,7 +315,7 @@ dependencies = [
 [[package]]
 name = "bridge-encodings"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-encodings#3cc4b16a6d7707940fb5a7bedbfbfc2e60b172a1"
+source = "git+https://github.com/bridge-craftwork/bridge-encodings#921be33663ec2b7f5e22e6b65456269a65031861"
 dependencies = [
  "bridge-types",
  "thiserror",
@@ -324,7 +324,7 @@ dependencies = [
 [[package]]
 name = "bridge-parsers"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/Bridge-Parsers#c64b2b7fd16bd1a8b40fbd0b99393dfc9c0fa923"
+source = "git+https://github.com/bridge-craftwork/Bridge-Parsers#74d7b30cf354e8e3a6f3965eb947e27a8765fad6"
 dependencies = [
  "anyhow",
  "bridge-encodings",
@@ -347,7 +347,7 @@ dependencies = [
 [[package]]
 name = "bridge-solver"
 version = "0.4.0"
-source = "git+https://github.com/bridge-craftwork/bridge-solver#a14e712f0c00cf271d44787a9f965a84af4f1c0b"
+source = "git+https://github.com/bridge-craftwork/bridge-solver#a1fdb06819f2e3f86fc5cb113baee9b8ebcd7720"
 dependencies = [
  "bridge-types",
 ]
@@ -355,11 +355,11 @@ dependencies = [
 [[package]]
 name = "bridge-types"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-types#436a84efc98615f0c788a3c883b2f2ff12f6bd52"
+source = "git+https://github.com/bridge-craftwork/bridge-types#3b26da0c6b2e1f084b0e0b55796f3f19d02947fd"
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.66"
+version = "0.9.67"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -1308,9 +1308,9 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "1.4.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6970f50e31d6fc17d3fa27329444bfa74e196cf62e95052a3f6fee181dba6425"
+checksum = "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0"
 dependencies = [
  "bytes",
  "itoa 1.0.18",
@@ -2277,7 +2277,7 @@ dependencies = [
 [[package]]
 name = "pbn-to-pdf"
 version = "0.17.1"
-source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#29daba40409829db5f448c4fb148897dcdf2e7d1"
+source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#525e849372485c31d6e325ad349a0b5b9ef361ba"
 dependencies = [
  "anyhow",
  "bridge-types",
@@ -2962,9 +2962,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.42"
+version = "0.23.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c54fcab019b409d04215d3a17cb438fd7fbf192ee61461f20f4fe18704bc138"
+checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
 dependencies = [
  "once_cell",
  "rustls-pki-types",
