@@ -21,9 +21,9 @@ dependencies = [
 
 [[package]]
 name = "aho-corasick"
-version = "1.1.4"
+version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddd31a130427c27518df266943a5308ed92d4b226cc639f5a8f1002816174301"
+checksum = "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba"
 dependencies = [
  "memchr",
 ]
@@ -347,7 +347,7 @@ dependencies = [
 [[package]]
 name = "bridge-solver"
 version = "0.4.0"
-source = "git+https://github.com/bridge-craftwork/bridge-solver#fe95173ea29d174ca94edfefaa3b4fa07d07ad2e"
+source = "git+https://github.com/bridge-craftwork/bridge-solver#2d67b7ea3c8552332a06e7ed5b372476c0ce63b3"
 dependencies = [
  "bridge-types",
 ]
@@ -359,7 +359,7 @@ source = "git+https://github.com/bridge-craftwork/bridge-types#3b26da0c6b2e1f084
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.70"
+version = "0.9.71"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -1072,7 +1072,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fc1a1678e54befc9b4bcab6cd43b8e7f834ae8ea121118b0fd8c42747675b4a"
 dependencies = [
  "float_next_after 1.0.0",
- "geo-types 0.7.19",
+ "geo-types 0.7.20",
  "geographiclib-rs",
  "i_overlay",
  "log",
@@ -1105,14 +1105,15 @@ dependencies = [
 
 [[package]]
 name = "geo-types"
-version = "0.7.19"
+version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94776032c45f950d30a13af6113c2ad5625316c9abfbccee4dd5a6695f8fe0f5"
+checksum = "777d18aa0f12f8b285331cd867133ee14422b3f023f6d388034c47d43e28786a"
 dependencies = [
  "approx 0.5.1",
  "num-traits",
  "rstar",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
