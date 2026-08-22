@@ -359,7 +359,7 @@ source = "git+https://github.com/bridge-craftwork/bridge-types#3b26da0c6b2e1f084
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.89"
+version = "0.9.91"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -2279,7 +2279,7 @@ dependencies = [
 [[package]]
 name = "pbn-to-pdf"
 version = "0.17.1"
-source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#525e849372485c31d6e325ad349a0b5b9ef361ba"
+source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#554e7b3451152c862179ecd3ec807568e44b495f"
 dependencies = [
  "anyhow",
  "bridge-types",
