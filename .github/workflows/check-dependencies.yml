@@ -2,7 +2,8 @@ name: Check Dependencies
 
 on:
   schedule:
-    # 4 AM Pacific (12:00 UTC during PST, 11:00 UTC during PDT)
+    # 12:00 UTC daily. GitHub cron has no DST handling, so this is 4 AM PST
+    # and 5 AM PDT.
     - cron: '0 12 * * *'
   workflow_dispatch:  # Allow manual trigger
 
@@ -48,25 +49,58 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-build-target-
 
-    - name: Check for updates
+    - name: Check for internal dependency updates
       id: check
       run: |
-        # Capture current lockfile hash
+        # Only re-resolve the internal bridge-craftwork crates. They are
+        # unpinned git dependencies, so nothing else would ever pull an upstream
+        # fix into a released binary. A blanket `cargo update` would also churn
+        # every crates.io transitive dep and cut a release for any unrelated
+        # bump anywhere in the tree.
+        update_args=()
+        while read -r pkg; do
+          update_args+=(-p "$pkg")
+        done < <(awk '
+          /^name = / { name = $3; gsub(/"/, "", name) }
+          /^source = .*github\.com\/bridge-craftwork\// { print name }
+        ' Cargo.lock | sort -u)
+
+        if [ ${#update_args[@]} -eq 0 ]; then
+          echo "::error::No bridge-craftwork git dependencies found in Cargo.lock"
+          exit 1
+        fi
+
+        echo "Tracking:${update_args[*]/#-p/}"
+
         old_hash=$(sha256sum Cargo.lock | cut -d' ' -f1)
-
-        # Update dependencies
-        cargo update
-
-        # Check if anything changed
+        cargo update "${update_args[@]}"
         new_hash=$(sha256sum Cargo.lock | cut -d' ' -f1)
 
         if [ "$old_hash" != "$new_hash" ]; then
           echo "updated=true" >> $GITHUB_OUTPUT
-          echo "Dependencies have been updated"
+          echo "Internal dependencies have been updated"
+          git --no-pager diff --stat Cargo.lock
         else
           echo "updated=false" >> $GITHUB_OUTPUT
-          echo "No dependency updates found"
+          echo "No internal dependency updates found"
         fi
+
+    # Bump before building so the build syncs Cargo.lock's own bridge-wrangler
+    # entry to the new version - otherwise the lock ships one version behind the
+    # tag it is committed under.
+    - name: Bump patch version
+      id: bump
+      if: steps.check.outputs.updated == 'true'
+      run: |
+        current=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+        major=$(echo $current | cut -d. -f1)
+        minor=$(echo $current | cut -d. -f2)
+        patch=$(echo $current | cut -d. -f3)
+        new_version="$major.$minor.$((patch + 1))"
+
+        echo "Bumping version from $current to $new_version"
+        sed -i "s/^version = \"$current\"/version = \"$new_version\"/" Cargo.toml
+        echo "version=$new_version" >> $GITHUB_OUTPUT
 
     - name: Build
       if: steps.check.outputs.updated == 'true'
@@ -76,31 +110,21 @@ jobs:
       if: steps.check.outputs.updated == 'true'
       run: cargo test
 
-    - name: Bump patch version and release
+    - name: Commit, tag and release
       if: steps.check.outputs.updated == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NEW_VERSION: ${{ steps.bump.outputs.version }}
       run: |
-        # Extract current version and bump patch
-        current=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
-        major=$(echo $current | cut -d. -f1)
-        minor=$(echo $current | cut -d. -f2)
-        patch=$(echo $current | cut -d. -f3)
-        new_version="$major.$minor.$((patch + 1))"
-
-        echo "Bumping version from $current to $new_version"
-        sed -i "s/^version = \"$current\"/version = \"$new_version\"/" Cargo.toml
-
-        # Configure git
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
         # Commit and tag - release.yml will handle creating the GitHub release with binaries
         git add Cargo.toml Cargo.lock
-        git commit -m "Release v$new_version (dependency update)"
-        git tag "v$new_version"
+        git commit -m "Release v$NEW_VERSION (dependency update)"
+        git tag "v$NEW_VERSION"
         git push && git push --tags
 
         # Tag pushes from GITHUB_TOKEN do not trigger downstream workflows, so
         # explicitly dispatch the release build against the new tag ref.
-        gh workflow run release.yml --ref "v$new_version"
+        gh workflow run release.yml --ref "v$NEW_VERSION"
