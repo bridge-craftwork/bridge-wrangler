@@ -315,7 +315,7 @@ dependencies = [
 [[package]]
 name = "bridge-encodings"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-encodings#03cc7fc671e72ddf99a34811bccc6a106cac80e2"
+source = "git+https://github.com/bridge-craftwork/bridge-encodings#471721ce9e0a1bbfcaf090f4c8c551cf7fa11c6d"
 dependencies = [
  "bridge-types",
  "thiserror",
@@ -324,7 +324,7 @@ dependencies = [
 [[package]]
 name = "bridge-parsers"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/Bridge-Parsers#74d7b30cf354e8e3a6f3965eb947e27a8765fad6"
+source = "git+https://github.com/bridge-craftwork/Bridge-Parsers#4e12e95aeda42ffe6017b6eb0597815a076b8dcf"
 dependencies = [
  "anyhow",
  "bridge-encodings",
@@ -347,7 +347,7 @@ dependencies = [
 [[package]]
 name = "bridge-solver"
 version = "1.0.0"
-source = "git+https://github.com/bridge-craftwork/bridge-solver#0dab947bb4c47d85958f19009de851ac909d52ea"
+source = "git+https://github.com/bridge-craftwork/bridge-solver#8e6814e8b153a982fd2f69f251b0c4b033e66ef2"
 dependencies = [
  "bridge-types",
 ]
@@ -359,7 +359,7 @@ source = "git+https://github.com/bridge-craftwork/bridge-types#3b26da0c6b2e1f084
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.97"
+version = "0.9.98"
 dependencies = [
  "anyhow",
  "bridge-parsers",
@@ -2279,7 +2279,7 @@ dependencies = [
 [[package]]
 name = "pbn-to-pdf"
 version = "0.18.0"
-source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#fa3669546a1721782dc5628c568a61055e39894c"
+source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#74a91c97b9429e9a63124383670714813cca6fd8"
 dependencies = [
  "anyhow",
  "bridge-types",
