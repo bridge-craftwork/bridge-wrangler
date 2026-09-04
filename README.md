@@ -225,7 +225,26 @@ By default, the command runs quietly and only reports progress. Use `-v` to disp
   W     6   6   6   6   6
 ```
 
-When using `--output`, the results are added to the PBN file as `[OptimumResultTable]` tags.
+When using `--output`, the results are added to the PBN file as an
+`[OptimumResultTable]` **table section**, the form PBN 2.1 §5.7 defines: a header
+naming the three columns, then one line per cell.
+
+```
+[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+N NT  7
+N  S  6
+N  H  7
+N  D  6
+N  C  6
+S NT  7
+...
+W  C  6
+```
+
+Twenty rows, one per (declarer, denomination) pair. An existing
+`[OptimumResultTable]` on a board is replaced, not duplicated, and every other
+byte of the file — `%` directives, `;` comments, `{...}` commentary and tag
+order — is left exactly as it was.
 
 #### Examples
 
