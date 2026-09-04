@@ -1,12 +1,35 @@
 use anyhow::{Context, Result};
-use bridge_parsers::pbn::read_pbn;
-use bridge_parsers::{Board, Direction, Vulnerability};
+use bridge_encodings::pbn::{optimum_result_table_rows, PbnDocument, OPTIMUM_RESULT_TABLE_HEADER};
 use bridge_solver::{
-    CutoffCache, Hands, PatternCache, Solver, CLUB, DIAMOND, EAST, HEART, NORTH, NOTRUMP, SOUTH,
-    SPADE, WEST,
+    direction_to_seat, CutoffCache, Hands, PatternCache, Solver, Suit, CLUB, DIAMOND, HEART,
+    NOTRUMP, SPADE,
 };
+use bridge_types::{Board, DdTable, Direction, Strain, Vulnerability};
 use clap::Args as ClapArgs;
 use std::path::PathBuf;
+
+/// Declarer rows of this tool's console table: partners adjacent, the way a
+/// double-dummy table is read at the table.
+///
+/// This is presentation only. The PBN encoding states its own row order in
+/// `bridge_encodings::pbn`, and [`DdTable`] keeps its storage order private so
+/// the two cannot be confused.
+const DISPLAY_DECLARERS: [Direction; 4] = [
+    Direction::North,
+    Direction::South,
+    Direction::East,
+    Direction::West,
+];
+
+/// Denomination columns of this tool's console table: notrump first, then
+/// spades down to clubs. Presentation only, as [`DISPLAY_DECLARERS`].
+const DISPLAY_STRAINS: [Strain; 5] = [
+    Strain::NoTrump,
+    Strain::Spades,
+    Strain::Hearts,
+    Strain::Diamonds,
+    Strain::Clubs,
+];
 
 #[derive(ClapArgs)]
 pub struct Args {
@@ -27,113 +50,81 @@ pub struct Args {
     pub verbose: bool,
 }
 
-/// DD analysis results for a single board
-#[derive(Debug, Clone)]
-pub struct DdResults {
-    /// Tricks by declarer (N, S, E, W) and denomination (NT, S, H, D, C)
-    /// results[declarer_idx][denom_idx] = tricks
-    pub tricks: [[u8; 5]; 4],
+/// Format a solved table for the console.
+///
+/// This is the tool's own presentation, not a PBN encoding: rows in
+/// [`DISPLAY_DECLARERS`] order, columns in [`DISPLAY_STRAINS`] order.
+pub fn display_table(table: &DdTable) -> String {
+    let mut output = String::from("       NT   S   H   D   C\n");
+    for declarer in DISPLAY_DECLARERS {
+        output.push_str(&format!("  {}  ", declarer.to_char()));
+        for strain in DISPLAY_STRAINS {
+            output.push_str(&format!("  {:2}", table.tricks(declarer, strain)));
+        }
+        output.push('\n');
+    }
+    output
 }
 
-impl DdResults {
-    /// Format as OptimumResultTable PBN tag value
-    pub fn to_optimum_result_table(&self) -> String {
-        // Format: "NT\tS\tH\tD\tC\nN\t7\t8\t6\t7\t9\nS\t7\t8\t6\t7\t9\nE\t6\t5\t7\t6\t4\nW\t6\t5\t7\t6\t4"
-        let mut lines = vec!["NT\tS\tH\tD\tC".to_string()];
-        let seats = ['N', 'S', 'E', 'W'];
-        for (i, seat) in seats.iter().enumerate() {
-            let row: Vec<String> = self.tricks[i].iter().map(|t| t.to_string()).collect();
-            lines.push(format!("{}\t{}", seat, row.join("\t")));
-        }
-        lines.join("\\n")
+/// The par contract and score for a solved table.
+///
+/// A simplified par: the better of the two sides' best makeable contracts,
+/// without modelling a sacrifice.
+pub fn par_score(table: &DdTable, vul_ns: bool, vul_ew: bool) -> (String, i32) {
+    let (ns_contract, ns_score) = best_contract_for_side(table, true, vul_ns);
+    let (ew_contract, ew_score) = best_contract_for_side(table, false, vul_ew);
+
+    // The par is the result after competitive bidding: if NS can make game and
+    // EW cannot profitably sacrifice, NS plays game.
+    if ns_score >= -ew_score {
+        (ns_contract, ns_score)
+    } else {
+        (ew_contract, -ew_score)
     }
+}
 
-    /// Format as human-readable table
-    pub fn to_display_table(&self) -> String {
-        let mut output = String::new();
-        output.push_str("       NT   S   H   D   C\n");
-        let seats = ["N", "S", "E", "W"];
-        for (i, seat) in seats.iter().enumerate() {
-            output.push_str(&format!(
-                "  {}    {:2}  {:2}  {:2}  {:2}  {:2}\n",
-                seat,
-                self.tricks[i][0],
-                self.tricks[i][1],
-                self.tricks[i][2],
-                self.tricks[i][3],
-                self.tricks[i][4]
-            ));
-        }
-        output
-    }
+/// The highest-scoring contract one side can make, and its score.
+fn best_contract_for_side(table: &DdTable, is_ns: bool, declarer_vul: bool) -> (String, i32) {
+    let declarers: [Direction; 2] = if is_ns {
+        [Direction::North, Direction::South]
+    } else {
+        [Direction::East, Direction::West]
+    };
 
-    /// Get the par contract(s) and score
-    pub fn par_score(&self, vul_ns: bool, vul_ew: bool) -> (String, i32) {
-        // Find the best contract for each side
-        let (ns_contract, ns_score) = self.best_contract_for_side(true, vul_ns, vul_ew);
-        let (ew_contract, ew_score) = self.best_contract_for_side(false, vul_ew, vul_ns);
+    let mut best_contract = String::new();
+    let mut best_score = i32::MIN;
 
-        // The par is the result after competitive bidding
-        // If NS can make game and EW can't profitably sacrifice, NS plays game
-        // This is a simplified par calculation
-        if ns_score >= -ew_score {
-            (ns_contract, ns_score)
-        } else {
-            (ew_contract, -ew_score)
-        }
-    }
-
-    fn best_contract_for_side(
-        &self,
-        is_ns: bool,
-        declarer_vul: bool,
-        _defender_vul: bool,
-    ) -> (String, i32) {
-        let declarers: &[usize] = if is_ns { &[0, 1] } else { &[2, 3] };
-        let denoms = ["NT", "S", "H", "D", "C"];
-        let seats = ["N", "S", "E", "W"];
-
-        let mut best_contract = String::new();
-        let mut best_score = i32::MIN;
-
-        for &decl in declarers {
-            for (denom_idx, denom) in denoms.iter().enumerate() {
-                let tricks = self.tricks[decl][denom_idx];
-                // Try different contract levels
-                for level in 1..=7 {
-                    let required = level + 6;
-                    if tricks >= required {
-                        let score = calculate_score(level, denom_idx, tricks, declarer_vul, false);
-                        if score > best_score {
-                            best_score = score;
-                            best_contract = format!("{}{} by {}", level, denom, seats[decl]);
-                        }
+    for declarer in declarers {
+        for strain in DISPLAY_STRAINS {
+            let tricks = table.tricks(declarer, strain);
+            for level in 1..=7 {
+                let required = level + 6;
+                if tricks >= required {
+                    let score = calculate_score(level, strain, tricks, declarer_vul, false);
+                    if score > best_score {
+                        best_score = score;
+                        best_contract =
+                            format!("{}{} by {}", level, strain.to_pbn(), declarer.to_char());
                     }
                 }
             }
         }
-
-        if best_contract.is_empty() {
-            best_contract = "Pass".to_string();
-            best_score = 0;
-        }
-
-        (best_contract, best_score)
     }
+
+    if best_contract.is_empty() {
+        best_contract = "Pass".to_string();
+        best_score = 0;
+    }
+
+    (best_contract, best_score)
 }
 
 /// Calculate the score for a made contract
-fn calculate_score(level: u8, denom_idx: usize, tricks: u8, vul: bool, doubled: bool) -> i32 {
+fn calculate_score(level: u8, strain: Strain, tricks: u8, vul: bool, doubled: bool) -> i32 {
     let overtricks = tricks as i32 - (level as i32 + 6);
+    let trick_value = strain.trick_value();
 
-    // Trick values
-    let trick_value = match denom_idx {
-        0 => 30,     // NT (but first trick is 40)
-        1 | 2 => 30, // Major
-        _ => 20,     // Minor
-    };
-
-    let mut score = if denom_idx == 0 {
+    let mut score = if strain == Strain::NoTrump {
         40 + (level as i32 - 1) * 30 // NT: 40 for first, 30 for rest
     } else {
         level as i32 * trick_value
@@ -144,10 +135,10 @@ fn calculate_score(level: u8, denom_idx: usize, tricks: u8, vul: bool, doubled: 
     }
 
     // Game/slam bonuses
-    let game_threshold = match denom_idx {
-        0 => 3,     // 3NT
-        1 | 2 => 4, // 4M
-        _ => 5,     // 5m
+    let game_threshold = match strain {
+        Strain::NoTrump => 3,                  // 3NT
+        Strain::Spades | Strain::Hearts => 4,  // 4M
+        Strain::Diamonds | Strain::Clubs => 5, // 5m
     };
 
     if level >= game_threshold {
@@ -178,36 +169,49 @@ fn calculate_score(level: u8, denom_idx: usize, tricks: u8, vul: bool, doubled: 
 }
 
 pub fn run(args: Args) -> Result<()> {
-    // Read and parse PBN file
     let content = std::fs::read_to_string(&args.input)
         .with_context(|| format!("Failed to read input file: {}", args.input.display()))?;
 
-    let boards = read_pbn(&content).map_err(|e| anyhow::anyhow!("Failed to parse PBN: {:?}", e))?;
+    // One parse serves both jobs: `boards()` is what `read_pbn` would return,
+    // and the same document edits itself in place later without disturbing the
+    // bytes it did not write.
+    let mut doc = PbnDocument::parse(&content)
+        .map_err(|e| anyhow::anyhow!("Failed to parse PBN: {:?}", e))?;
 
-    println!("Read {} boards from {}", boards.len(), args.input.display());
+    println!(
+        "Read {} boards from {}",
+        doc.boards().len(),
+        args.input.display()
+    );
 
-    // Filter boards if range specified
-    let boards: Vec<Board> = if let Some(ref range) = args.board_range {
-        let allowed = parse_board_range(range)?;
-        boards
-            .into_iter()
-            .filter(|b| b.number.map(|n| allowed.contains(&n)).unwrap_or(false))
-            .collect()
-    } else {
-        boards
+    let allowed = match args.board_range {
+        Some(ref range) => Some(parse_board_range(range)?),
+        None => None,
     };
 
-    if boards.is_empty() {
+    let selected: Vec<usize> = doc
+        .boards()
+        .iter()
+        .enumerate()
+        .filter(|(_, board)| match allowed {
+            Some(ref allowed) => board.number.is_some_and(|n| allowed.contains(&n)),
+            None => true,
+        })
+        .map(|(index, _)| index)
+        .collect();
+
+    if selected.is_empty() {
         return Err(anyhow::anyhow!("No boards to analyze after filtering"));
     }
 
-    // Analyze each board
-    let mut results: Vec<(u32, DdResults)> = Vec::new();
+    // Solve first, edit afterwards: `boards()` borrows the document, and the
+    // section writes need it mutably.
+    let mut results: Vec<(usize, DdTable)> = Vec::new();
 
-    for board in &boards {
+    for index in selected {
+        let board = &doc.boards()[index];
         let board_num = board.number.unwrap_or(0);
 
-        // Convert deal to solver format
         let hands = match board_to_hands(board) {
             Some(h) => h,
             None => {
@@ -218,37 +222,56 @@ pub fn run(args: Args) -> Result<()> {
 
         println!("Analyzing board {}...", board_num);
 
-        let dd_results = analyze_deal(&hands);
+        let table = analyze_deal(&hands);
 
         if args.verbose {
             println!("Board {}:", board_num);
-            println!("{}", dd_results.to_display_table());
+            println!("{}", display_table(&table));
 
-            // Show par if vulnerability is known
             let (vul_ns, vul_ew) = match board.vulnerable {
                 Vulnerability::None => (false, false),
                 Vulnerability::NorthSouth => (true, false),
                 Vulnerability::EastWest => (false, true),
                 Vulnerability::Both => (true, true),
             };
-            let (par_contract, par_score) = dd_results.par_score(vul_ns, vul_ew);
-            println!("  Par: {} ({})\n", par_contract, par_score);
+            let (par_contract, par) = par_score(&table, vul_ns, vul_ew);
+            println!("  Par: {} ({})\n", par_contract, par);
         }
 
-        results.push((board_num, dd_results));
+        results.push((index, table));
     }
 
     println!("Analyzed {} boards", results.len());
 
-    // Write output PBN with DD tags if requested
     if let Some(output_path) = args.output {
-        let output_content = add_dd_tags_to_pbn(&content, &results)?;
-        std::fs::write(&output_path, output_content)
+        for (index, table) in &results {
+            set_optimum_result_table(&mut doc, *index, table)?;
+        }
+        doc.write_file(&output_path)
             .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
         println!("\nWrote PBN with DD results to {}", output_path.display());
     }
 
     Ok(())
+}
+
+/// Write one board's `OptimumResultTable` section, replacing any it already
+/// carries.
+///
+/// The header and rows come from `bridge_encodings`, which is the one place
+/// that says how a double-dummy table is written down: PBN 2.1 §5.7 defines the
+/// tag as a table section, a header naming its three columns followed by one
+/// line per cell.
+fn set_optimum_result_table(doc: &mut PbnDocument, board: usize, table: &DdTable) -> Result<()> {
+    let rows = optimum_result_table_rows(table);
+    let rows: Vec<&str> = rows.iter().map(String::as_str).collect();
+    doc.set_section(
+        board,
+        "OptimumResultTable",
+        OPTIMUM_RESULT_TABLE_HEADER,
+        &rows,
+    )
+    .map_err(|e| anyhow::anyhow!("Failed to write OptimumResultTable: {:?}", e))
 }
 
 /// Convert a Board's deal to solver Hands format
@@ -277,119 +300,45 @@ fn board_to_hands(board: &Board) -> Option<Hands> {
     Hands::from_pbn(&pbn_deal)
 }
 
-/// Perform DD analysis on a deal
-fn analyze_deal(hands: &Hands) -> DdResults {
-    let declarers = [NORTH, SOUTH, EAST, WEST];
-    let denominations = [NOTRUMP, SPADE, HEART, DIAMOND, CLUB];
-    let mut results = [[0u8; 5]; 4];
+/// The solver's trump constant for a strain.
+fn solver_trump(strain: Strain) -> Suit {
+    match strain {
+        Strain::NoTrump => NOTRUMP,
+        Strain::Spades => SPADE,
+        Strain::Hearts => HEART,
+        Strain::Diamonds => DIAMOND,
+        Strain::Clubs => CLUB,
+    }
+}
 
-    for (denom_idx, &trump) in denominations.iter().enumerate() {
+/// Perform DD analysis on a deal
+fn analyze_deal(hands: &Hands) -> DdTable {
+    let mut table = DdTable::new();
+
+    for strain in DISPLAY_STRAINS {
         // Create caches once per denomination for efficiency
         let mut cutoff_cache = CutoffCache::new(16);
         let mut pattern_cache = PatternCache::new(16);
 
-        for (decl_idx, &declarer_seat) in declarers.iter().enumerate() {
+        for declarer in DISPLAY_DECLARERS {
+            let declarer_seat = direction_to_seat(declarer);
             // Leader is to the left of declarer
             let leader = (declarer_seat + 1) % 4;
 
-            let solver = Solver::new(*hands, trump, leader);
+            let solver = Solver::new(*hands, solver_trump(strain), leader);
             let ns_tricks = solver.solve_with_caches(&mut cutoff_cache, &mut pattern_cache);
 
             // Convert NS tricks to declarer's tricks
-            let declarer_tricks = if declarer_seat == NORTH || declarer_seat == SOUTH {
-                ns_tricks
-            } else {
-                hands.num_tricks() as u8 - ns_tricks
+            let declarer_tricks = match declarer {
+                Direction::North | Direction::South => ns_tricks,
+                Direction::East | Direction::West => hands.num_tricks() as u8 - ns_tricks,
             };
 
-            results[decl_idx][denom_idx] = declarer_tricks;
+            table.set(declarer, strain, declarer_tricks);
         }
     }
 
-    DdResults { tricks: results }
-}
-
-/// Add DD result tags to PBN content
-fn add_dd_tags_to_pbn(content: &str, results: &[(u32, DdResults)]) -> Result<String> {
-    let results_map: std::collections::HashMap<u32, &DdResults> =
-        results.iter().map(|(n, r)| (*n, r)).collect();
-
-    let mut output = String::new();
-    let mut current_board: Option<u32> = None;
-    let mut inserted_dd = false;
-
-    for line in content.lines() {
-        let trimmed = line.trim();
-
-        // Track board number
-        if trimmed.starts_with("[Board ") {
-            // If we have a previous board and didn't insert DD, do it now
-            if let Some(board_num) = current_board {
-                if !inserted_dd {
-                    if let Some(dd) = results_map.get(&board_num) {
-                        output.push_str(&format!(
-                            "[OptimumResultTable \"{}\"]\n",
-                            dd.to_optimum_result_table()
-                        ));
-                    }
-                }
-            }
-
-            // Parse new board number
-            if let Some(start) = trimmed.find('"') {
-                if let Some(end) = trimmed[start + 1..].find('"') {
-                    if let Ok(num) = trimmed[start + 1..start + 1 + end].parse::<u32>() {
-                        current_board = Some(num);
-                        inserted_dd = false;
-                    }
-                }
-            }
-        }
-
-        // Skip existing OptimumResultTable tags (we'll replace them)
-        if trimmed.starts_with("[OptimumResultTable ") {
-            inserted_dd = true; // Mark as handled
-            if let Some(board_num) = current_board {
-                if let Some(dd) = results_map.get(&board_num) {
-                    output.push_str(&format!(
-                        "[OptimumResultTable \"{}\"]\n",
-                        dd.to_optimum_result_table()
-                    ));
-                }
-            }
-            continue;
-        }
-
-        // Insert DD tags before Deal tag if we haven't yet
-        if trimmed.starts_with("[Deal ") && !inserted_dd {
-            if let Some(board_num) = current_board {
-                if let Some(dd) = results_map.get(&board_num) {
-                    output.push_str(&format!(
-                        "[OptimumResultTable \"{}\"]\n",
-                        dd.to_optimum_result_table()
-                    ));
-                    inserted_dd = true;
-                }
-            }
-        }
-
-        output.push_str(line);
-        output.push('\n');
-    }
-
-    // Handle last board
-    if let Some(board_num) = current_board {
-        if !inserted_dd {
-            if let Some(dd) = results_map.get(&board_num) {
-                output.push_str(&format!(
-                    "[OptimumResultTable \"{}\"]\n",
-                    dd.to_optimum_result_table()
-                ));
-            }
-        }
-    }
-
-    Ok(output)
+    table
 }
 
 /// Parse a board range specification like "1-4" or "1,3,5" or "1-4,7,9-12"
@@ -429,6 +378,41 @@ fn parse_board_range(range: &str) -> Result<Vec<u32>> {
 mod tests {
     use super::*;
 
+    /// A two-board file carrying every kind of byte `PbnDocument` promises to
+    /// leave alone: a `%` directive block, `;` comments and `{...}` commentary.
+    const ANNOTATED_PBN: &str = concat!(
+        "% PBN 2.1\n",
+        "% EXPORT\n",
+        ";\n",
+        "; Hand-authored header comment - must survive the rewrite.\n",
+        ";\n",
+        "[Event \"Test Session\"]\n",
+        "[Board \"1\"]\n",
+        "[Dealer \"N\"]\n",
+        "[Vulnerable \"None\"]\n",
+        "[Deal \"N:K843.T542.J6.863 AQJ7.K.Q75.AT942 962.AJ7.KT82.J75 T5.Q9863.A943.KQ\"]\n",
+        "{ Board one commentary, written by hand. }\n",
+        "\n",
+        "[Event \"Test Session\"]\n",
+        "[Board \"2\"]\n",
+        "[Dealer \"E\"]\n",
+        "[Vulnerable \"NS\"]\n",
+        "[Deal \"N:AQJ7.K.Q75.AT942 962.AJ7.KT82.J75 T5.Q9863.A943.KQ K843.T542.J6.863\"]\n",
+        "; a trailing comment on board two\n",
+    );
+
+    fn sample_table() -> DdTable {
+        let mut table = DdTable::new();
+        let mut n = 0u8;
+        for declarer in DISPLAY_DECLARERS {
+            for strain in DISPLAY_STRAINS {
+                table.set(declarer, strain, n % 14);
+                n += 1;
+            }
+        }
+        table
+    }
+
     #[test]
     fn test_parse_board_range() {
         assert_eq!(parse_board_range("1-4").unwrap(), vec![1, 2, 3, 4]);
@@ -440,12 +424,94 @@ mod tests {
     #[test]
     fn test_calculate_score() {
         // 3NT making exactly, not vul
-        assert_eq!(calculate_score(3, 0, 9, false, false), 400); // 100 + 300 game
+        assert_eq!(calculate_score(3, Strain::NoTrump, 9, false, false), 400); // 100 + 300 game
 
         // 4S making exactly, vul
-        assert_eq!(calculate_score(4, 1, 10, true, false), 620); // 120 + 500 game
+        assert_eq!(calculate_score(4, Strain::Spades, 10, true, false), 620); // 120 + 500 game
 
         // 3NT with 2 overtricks, not vul
-        assert_eq!(calculate_score(3, 0, 11, false, false), 460); // 100 + 300 + 60
+        assert_eq!(calculate_score(3, Strain::NoTrump, 11, false, false), 460); // 100 + 300 + 60
+    }
+
+    #[test]
+    fn display_table_is_notrump_first_and_partners_adjacent() {
+        let table = sample_table();
+        let shown = display_table(&table);
+        let lines: Vec<&str> = shown.lines().collect();
+        assert_eq!(lines[0], "       NT   S   H   D   C");
+        assert_eq!(lines.len(), 5);
+        for (line, declarer) in lines[1..].iter().zip(DISPLAY_DECLARERS) {
+            assert!(line.starts_with(&format!("  {}  ", declarer.to_char())));
+        }
+    }
+
+    /// The tag is a PBN 2.1 §5.7 table section, not one quoted value with
+    /// embedded separators.
+    #[test]
+    fn optimum_result_table_is_written_as_a_section() {
+        let mut doc = PbnDocument::parse(ANNOTATED_PBN).unwrap();
+        set_optimum_result_table(&mut doc, 0, &sample_table()).unwrap();
+        let out = doc.to_pbn();
+
+        assert!(out.contains(&format!(
+            "[OptimumResultTable \"{}\"]",
+            OPTIMUM_RESULT_TABLE_HEADER
+        )));
+        // Twenty data rows, one cell each, and nothing tab-separated.
+        let rows = doc.tag_rows(0, "OptimumResultTable");
+        assert_eq!(rows.len(), 20);
+        assert!(!out.contains('\t'));
+        assert!(!out.contains("\\n"));
+        for row in rows {
+            assert_eq!(row.split_whitespace().count(), 3);
+        }
+    }
+
+    #[test]
+    fn rewrite_preserves_directives_comments_and_commentary() {
+        let mut doc = PbnDocument::parse(ANNOTATED_PBN).unwrap();
+        assert_eq!(doc.boards().len(), 2);
+        for board in 0..doc.boards().len() {
+            set_optimum_result_table(&mut doc, board, &sample_table()).unwrap();
+        }
+        let out = doc.to_pbn();
+
+        for preserved in [
+            "% PBN 2.1",
+            "% EXPORT",
+            "; Hand-authored header comment - must survive the rewrite.",
+            "{ Board one commentary, written by hand. }",
+            "; a trailing comment on board two",
+            "[Event \"Test Session\"]",
+            "[Deal \"N:K843.T542.J6.863 AQJ7.K.Q75.AT942 962.AJ7.KT82.J75 T5.Q9863.A943.KQ\"]",
+        ] {
+            assert!(out.contains(preserved), "lost {preserved:?}");
+        }
+    }
+
+    /// An unedited document is byte-for-byte the file it was given, and a board
+    /// that is not selected keeps every byte it had.
+    #[test]
+    fn untouched_boards_are_untouched() {
+        let doc = PbnDocument::parse(ANNOTATED_PBN).unwrap();
+        assert!(!doc.is_modified());
+        assert_eq!(doc.to_pbn(), ANNOTATED_PBN);
+
+        let mut doc = doc;
+        set_optimum_result_table(&mut doc, 1, &sample_table()).unwrap();
+        assert!(doc.is_modified());
+        assert!(doc.tag_rows(0, "OptimumResultTable").is_empty());
+        assert_eq!(doc.tag_rows(1, "OptimumResultTable").len(), 20);
+    }
+
+    /// Replacing an existing table leaves one section behind, not two.
+    #[test]
+    fn existing_table_is_replaced_not_duplicated() {
+        let mut doc = PbnDocument::parse(ANNOTATED_PBN).unwrap();
+        set_optimum_result_table(&mut doc, 0, &sample_table()).unwrap();
+        set_optimum_result_table(&mut doc, 0, &sample_table()).unwrap();
+        let out = doc.to_pbn();
+        assert_eq!(out.matches("[OptimumResultTable ").count(), 1);
+        assert_eq!(doc.tag_rows(0, "OptimumResultTable").len(), 20);
     }
 }
