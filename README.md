@@ -230,7 +230,7 @@ When using `--output`, the results are added to the PBN file as an
 naming the three columns, then one line per cell.
 
 ```
-[OptimumResultTable "Declarer;Denomination\2R;Result\2R"]
+[OptimumResultTable "Declarer;Denomination\2R;Result\1R"]
 N NT  7
 N  S  6
 N  H  7
@@ -245,6 +245,19 @@ Twenty rows, one per (declarer, denomination) pair. An existing
 `[OptimumResultTable]` on a board is replaced, not duplicated, and every other
 byte of the file — `%` directives, `;` comments, `{...}` commentary and tag
 order — is left exactly as it was.
+
+The `Result` column is declared `\1R` when no cell on the board exceeds nine
+tricks, as above, and `\2R` once any cell reaches ten. That is what Bridge
+Composer writes, so annotating a file it produced does not leave a header it
+will rewrite the next time the file is opened and saved.
+
+One caveat, and it is not ours to fix here: Bridge Composer puts
+`[OptimumResultTable]` after `[Auction]` and `[Play]`, with the other
+supplemental *sections*, and `PbnDocument` currently inserts a new one earlier,
+alphabetically among the one-line supplemental tags. A board that already
+carries a table keeps its position, so re-annotating a Bridge Composer file is
+unaffected; only a first annotation of a file that has an auction is placed
+early. See bridge-craftwork/bridge-encodings#13.
 
 #### Examples
 
