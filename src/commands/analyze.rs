@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use bridge_encodings::pbn::{optimum_result_table_rows, PbnDocument, OPTIMUM_RESULT_TABLE_HEADER};
+use bridge_encodings::pbn::{optimum_result_table_header, optimum_result_table_rows, PbnDocument};
 use bridge_solver::{
     direction_to_seat, CutoffCache, Hands, PatternCache, Solver, Suit, CLUB, DIAMOND, HEART,
     NOTRUMP, SPADE,
@@ -262,13 +262,28 @@ pub fn run(args: Args) -> Result<()> {
 /// that says how a double-dummy table is written down: PBN 2.1 §5.7 defines the
 /// tag as a table section, a header naming its three columns followed by one
 /// line per cell.
+///
+/// The header's `Result` column width depends on the table, so it is computed
+/// per board rather than being a constant: `\1R` when every cell fits in one
+/// digit, `\2R` once any cell reaches ten. That is what Bridge Composer
+/// writes, and matching it is what keeps a round trip through that tool from
+/// rewriting the header of every single-digit board we annotate.
+///
+/// Placement is `PbnDocument`'s to decide, and it currently puts a *new*
+/// `OptimumResultTable` among the one-line supplemental tags, ahead of
+/// `[Auction]` and `[Play]`, where Bridge Composer puts it after them with the
+/// other supplemental sections. A table that is already present is replaced
+/// where it stands, so re-annotating a Bridge Composer file keeps its order.
+/// See bridge-craftwork/bridge-encodings#13; there is deliberately no
+/// workaround here, because moving lines behind the document's back is how a
+/// `%` directive or a `{...}` commentary block gets stranded.
 fn set_optimum_result_table(doc: &mut PbnDocument, board: usize, table: &DdTable) -> Result<()> {
     let rows = optimum_result_table_rows(table);
     let rows: Vec<&str> = rows.iter().map(String::as_str).collect();
     doc.set_section(
         board,
         "OptimumResultTable",
-        OPTIMUM_RESULT_TABLE_HEADER,
+        &optimum_result_table_header(table),
         &rows,
     )
     .map_err(|e| anyhow::anyhow!("Failed to write OptimumResultTable: {:?}", e))
@@ -455,7 +470,7 @@ mod tests {
 
         assert!(out.contains(&format!(
             "[OptimumResultTable \"{}\"]",
-            OPTIMUM_RESULT_TABLE_HEADER
+            optimum_result_table_header(&sample_table())
         )));
         // Twenty data rows, one cell each, and nothing tab-separated.
         let rows = doc.tag_rows(0, "OptimumResultTable");
@@ -502,6 +517,34 @@ mod tests {
         assert!(doc.is_modified());
         assert!(doc.tag_rows(0, "OptimumResultTable").is_empty());
         assert_eq!(doc.tag_rows(1, "OptimumResultTable").len(), 20);
+    }
+
+    /// The `Result` column is one digit wide when the board never makes ten,
+    /// and two once it does — what Bridge Composer writes, so a round trip
+    /// through it does not rewrite our header.
+    #[test]
+    fn result_column_narrows_when_the_board_fits_in_one_digit() {
+        let mut narrow = DdTable::new();
+        for declarer in DISPLAY_DECLARERS {
+            for strain in DISPLAY_STRAINS {
+                narrow.set(declarer, strain, 9);
+            }
+        }
+
+        let mut doc = PbnDocument::parse(ANNOTATED_PBN).unwrap();
+        set_optimum_result_table(&mut doc, 0, &narrow).unwrap();
+        assert!(doc
+            .to_pbn()
+            .contains("[OptimumResultTable \"Declarer;Denomination\\2R;Result\\1R\"]"));
+
+        // One cell at ten is enough to widen it.
+        let mut wide = narrow;
+        wide.set(Direction::West, Strain::Clubs, 10);
+        let mut doc = PbnDocument::parse(ANNOTATED_PBN).unwrap();
+        set_optimum_result_table(&mut doc, 0, &wide).unwrap();
+        assert!(doc
+            .to_pbn()
+            .contains("[OptimumResultTable \"Declarer;Denomination\\2R;Result\\2R\"]"));
     }
 
     /// Replacing an existing table leaves one section behind, not two.
