@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use bridge_parsers::{Direction, Vulnerability};
+use bridge_types::{Direction, Vulnerability};
 use clap::Args as ClapArgs;
 use pbn_to_pdf::{config::Settings, parser::parse_pbn, render::generate_pdf};
 use regex::Regex;
