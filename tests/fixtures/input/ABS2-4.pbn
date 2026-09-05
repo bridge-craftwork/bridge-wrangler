@@ -1,0 +1,261 @@
+% PBN 2.1
+% EXPORT
+%Content-type: text/x-pbn; charset=UTF-8
+%Creator: BridgeComposer Version 5.104.1
+%Created: Wed Nov 29 22:25:46 2023 -0800
+%BCOptions Float Justify NoHRStats PageHeader STBorder STShade ShowHCP
+%BidAndCardSpacing Hair
+%BoardsPerPage 1
+%CardTableColors #008000,#ffffff,#aaaaaa
+%DDAFormat 0
+%DefaultPagination 0
+%Font:CardTable "Arial",11,400,0
+%Font:Commentary "Arial",12,400,0
+%Font:Diagram "Arial",12,400,0
+%Font:Event "Arial",18,400,0
+%Font:FixedPitch "Courier New",10,400,0
+%Font:HandRecord "Arial",11,400,0
+%GutterSize 500,500
+%HRTitleDate 2022.11.08
+%HRTitleEvent "ABS2-4 Eliminating Losers — Ruffing and Discarding"
+%HRTitleSetID ""
+%HRTitleSetIDPrefix ""
+%HRTitleSite ""
+%HtmlClubs entity,"http://bridgecomposer.com/suitimg/c.gif"
+%HtmlDiamonds entity,"http://bridgecomposer.com/suitimg/d.gif"
+%HtmlHearts entity,"http://bridgecomposer.com/suitimg/h.gif"
+%HtmlNavBar 0.75,#cfe2f3
+%HtmlSpades entity,"http://bridgecomposer.com/suitimg/s.gif"
+%Margins 1000,1000,1000,1000
+%PageFooter:0,0 "%D"
+%PageFooter:0,2 "Page %n"
+%PaperSize 1,2159,2794,2
+%ParaIndent 0
+%PipColors #000000,#ff0000,#ff0000,#000000
+%PipFont "Cards Decorative","Cards",0,0x53,0x48,0x44,0x43
+%ScoreTableColors #e6e6e6,#000000
+%SectionSpacing 12,0,0
+%SelectedBoard 0
+%ShowBoardLabels 1
+%ShowCardTable 2
+%TSTCustomSortOrder Default
+%TSTReport List
+%TSTReportOrder ByNumber
+%TSTReportShade Yes
+%Translate "Board %" "Deal %"
+[Event "Ruffing and Discarding Losers"]
+[Site ""]
+[Date ""]
+[Board "1"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "N"]
+[Vulnerable "None"]
+[Deal "N:QT9763.AK.Q3.A82 A.Q963.J752.KQJ6 J842.JT4.AK6.975 K5.8752.T984.T43"]
+[Scoring ""]
+[Declarer "N"]
+[Contract "4S"]
+[Result ""]
+{<b>Discarding a Loser</b>
+
+<b>Bidding.</b> North opens 1\S. With 16 dummy points and support for all of the unbid
+suits, East makes a takeout double.
+
+Regardless of the takeout double, South holds nine points with spade support,
+so raises to 2\S. South is too strong to recommend a weak 3\S response over the
+takeout double.
+
+North tries for game by rebidding 3\S, which South accepts holding a good hand
+for her previous raise.
+
+<b>Defense.</b> East leads the \CK, highest of touching honors. West discourages with
+the \C3.
+
+<b>Declarer play.</b> Declarer counts six sure winners and needs four more. Spades can
+be promoted for four more winners.
+
+Since this is a trump contract, declarer takes the additional step of checking
+for fast losers. The lead will have to be surrendered twice to establish enough
+winners, and the club lead has promoted two more fast losers in clubs. That's
+too many losers.
+
+Declarer looks for opportunities to discard a loser, and finds it in diamonds
+where there is an extra winner in dummy. Declarer wins the \CA and immediately
+plays \DQ-K-A, discarding a club loser. Now declarer can tackle spades. The
+defense takes two spade tricks, but only one club trick.
+
+<b>Key point.</b> Often when there is weakness in one suit, there is compensating
+strength in another. In this deal, the extra strength in diamonds provided an
+opportunity to eliminate a club loser. In putting it all together, declarer
+couldn’t draw trumps first, since the opponents would get the lead and take
+their club winners before declarer had discarded a loser.}
+[BCFlags "1f"]
+[Auction "N"]
+1S X 2S Pass
+3S Pass 4S AP
+[Play "E"]
+CK
+
+[Event ""]
+[Site ""]
+[Date ""]
+[Board "2"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "E"]
+[Vulnerable "NS"]
+[Deal "E:Q9753.AJ.T962.K9 AK.K8752.A3.T865 JT82.T6.KQJ5.AQJ 64.Q943.874.7432"]
+[Scoring ""]
+[Declarer "E"]
+[Contract "4S"]
+[Result ""]
+{<b>Discarding a Loser</b>
+
+<b>Bidding.</b> East passes and South opens 1\H. West holds 15 dummy points and
+support for all of the unbid suits, so doubles for takeout.
+
+North holds four-card support for hearts, but with such a weak hand otherwise,
+not to mention the vulnerability, declines to raise to 3\H, which would be weak
+over the takeout double.
+
+East holds 11 points, so advances by jumping to 2\S. West judges that game is
+possible, so raises to 3\S. East holds a maximum for her previous bidding, so
+bids game.
+
+<b>Defense.</b> South has three defensive tricks, and leads the fourth-best \H5 trying
+to develop a fourth trick in hearts. North plays \HQ, third hand high, so that
+declarer doesn't win an undeserved trick with the \HJ.
+
+<b>Declarer play.</b> Four sure tricks, needing six more. Three more tricks can be
+promoted in spades, and three more in diamonds. That's 10 tricks, but check the
+loser situation.
+
+Declarer has three sure losers, and the heart lead has established another.
+That's too many. Declarer has an extra winner in clubs, so before playing
+spades (or diamonds), declarer plays \n
+\CK-Q-A, discarding the heart loser.
+
+Now declarer tackles trumps. After trumps are drawn in two rounds, declarer
+tackles diamonds. The defense takes only two spades and a diamond trick.
+
+<b>Key point.</b> Declarer has to eliminate the heart loser before letting the
+opponents have the lead. On this deal, that means trumps can’t be played
+(because the opponents would get the lead) until declarer gets rid of the \HJ
+on the extra club winner.}
+[BCFlags "1f"]
+[Auction "E"]
+Pass 1H X Pass
+2S Pass 3S Pass
+4S AP
+[Play "S"]
+H5
+
+[Event ""]
+[Site ""]
+[Date ""]
+[Board "3"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "S"]
+[Vulnerable "EW"]
+[Deal "S:964.9754.J42.K63 J8.KJ3.AKT6.Q742 AKQ2.AT62.73.A95 T753.Q8.Q985.JT8"]
+[Scoring ""]
+[Declarer "S"]
+[Contract "2H"]
+[Result ""]
+{<b>Ruffing a Loser</b>
+
+<b>Bidding.</b> If West adds a point for her five-card diamond suit and opens 1NT, the
+auction might get very interesting. North holds enough to make a standard
+penalty double, which South will pass, hoping to defeat 1NT. If West stays the
+course and also passes, she will find that 1NT is unbeatable, despite
+North-South holding the balance of strength.
+
+If West opens 1\D, North-South should get to hearts. North holds 18 dummy
+points and support for all of the unbid suits, so doubles for takeout. East
+passes, and South advances with 1\H.
+
+North holds 19 dummy points and knows that game is still possible, even though
+South holds less than eight points. North raises to 2\H, but South holds a
+minimum and passes.
+
+<b>Defense.</b> West leads the \DA, highest of touching honors. East encourages with
+the \D9, which might be a doubleton. West continues with the \DK and a low
+diamond.
+
+<b>Declarer play.</b> Glad to be no higher than 2\H, declarer counts six sure winners
+and needs two more. A diamond ruff in dummy will provide another, as will heart
+length. Another trick might come from spade length.
+
+A count of losers reveals two in hearts and two in diamonds, so no worries
+about fast losers.
+
+After ruffing a diamond, declarer should pull trumps. It is good technique to
+duck a round of hearts, but playing the \HA does no harm on this deal.
+
+<b>Key point.</b> Declarer can gain winners by ruffing losers in the dummy. Declarer
+often has to manage the trump suit carefully in order to both ruff losers and
+draw the missing trumps.}
+[BCFlags "1f"]
+[Auction "S"]
+Pass 1D $2 X Pass
+1H Pass 2H AP
+[Play "W"]
+DA
+
+[Event ""]
+[Site ""]
+[Date ""]
+[Board "4"]
+[West ""]
+[North ""]
+[East ""]
+[South ""]
+[Dealer "W"]
+[Vulnerable "All"]
+[Deal "W:972.9862.KJ8.A92 QJ54.QJ3.AT6.K63 A863.AK75.Q92.T7 KT.T4.7543.QJ854"]
+[Scoring ""]
+[Declarer "W"]
+[Contract "2H"]
+[Result ""]
+{<b>Ruffing a Loser</b>
+
+<b>Bidding.</b> West passes and North opens 1\C, preferring to open 1\C when 3–3 in
+the minors.
+
+Holding 14 dummy points and support for all of the unbid suits, East doubles
+for takeout.
+
+South holds enough to compete to 2\C. Over 2\C, West need not bid. But, with
+eight points, West judges that 2\H will have a chance.
+
+<b>Defense.</b> Considering South's raise, North leads the \C3, low from an honor.
+South plays the \CJ, third hand only just as high as necessary.
+
+<b>Declarer play.</b> Declarer counts four sure winners and needs four more. Two can
+be promoted in diamonds, and another will come from heart length if the
+defender's hearts divide 3-2, as is likely. A club ruff will suffice for an
+eighth trick.
+
+To conserve entries, declarer ducks the opening club lead. Then declarer can
+win the club continuation in hand to ruff a club in dummy.
+
+Ducking a heart might expose declarer to a ruff, so declarer next cashes the
+\HA-K. Leaving a high trump outstanding, declarer now tackles diamonds.
+Declarer scores one spade, two high hearts and a heart trick by length in hand,
+two diamonds, one club, and a club ruff. The defense is held to two spades, one
+heart, one diamond, and one club.
+
+<b>Key point.</b> Declarer can eliminate a loser in hand by ruffing it in the dummy.}
+[BCFlags "1f"]
+[Auction "W"]
+Pass 1C X 2C
+2H AP
+[Play "N"]
+C3

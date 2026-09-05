@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
-use bridge_parsers::pbn::read_pbn;
-use bridge_parsers::{Board, Direction, Vulnerability};
+use bridge_encodings::pbn::read_pbn;
+use bridge_types::{Board, Direction, Vulnerability};
 use clap::{Args as ClapArgs, ValueEnum};
 use regex::Regex;
 use std::collections::HashMap;

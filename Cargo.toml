@@ -7,7 +7,6 @@ license = "Unlicense"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-bridge-parsers = { git = "https://github.com/bridge-craftwork/Bridge-Parsers" }
 bridge-encodings = { git = "https://github.com/bridge-craftwork/bridge-encodings" }
 bridge-types = { git = "https://github.com/bridge-craftwork/bridge-types" }
 bridge-solver = { git = "https://github.com/bridge-craftwork/bridge-solver" }
