@@ -300,7 +300,7 @@ dependencies = [
 [[package]]
 name = "bridge-encodings"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-encodings#bc54c8d6ee4405f3ed82782d4b172a2edb45f560"
+source = "git+https://github.com/bridge-craftwork/bridge-encodings#49e897976878faac64719005a48484f5b43f5cbd"
 dependencies = [
  "bridge-types",
  "thiserror",
@@ -318,11 +318,11 @@ dependencies = [
 [[package]]
 name = "bridge-types"
 version = "0.1.0"
-source = "git+https://github.com/bridge-craftwork/bridge-types#5a94d75216e1c7425eba77e70d3744a34e594ce3"
+source = "git+https://github.com/bridge-craftwork/bridge-types#b9e675bbd90c5312f096931eaeb87d260f2a9314"
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.9.100"
+version = "0.9.101"
 dependencies = [
  "anyhow",
  "bridge-encodings",
@@ -1693,9 +1693,10 @@ dependencies = [
 [[package]]
 name = "pbn-to-pdf"
 version = "0.18.0"
-source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#74a91c97b9429e9a63124383670714813cca6fd8"
+source = "git+https://github.com/bridge-craftwork/pbn-to-pdf#528406b6863377430d986421fc828c18d60992b6"
 dependencies = [
  "anyhow",
+ "bridge-encodings",
  "bridge-types",
  "clap",
  "env_logger",
