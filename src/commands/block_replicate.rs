@@ -26,6 +26,11 @@ pub struct Args {
     /// Also generate a PDF hand record
     #[arg(long)]
     pub pdf: bool,
+
+    /// Leave the page furniture (event header or headings, %PageFooter lines)
+    /// out of the PDF. For pipelines that add their own.
+    #[arg(long)]
+    pub no_page_furniture: bool,
 }
 
 /// Standard vulnerability pattern (repeats every 16 boards)
@@ -137,7 +142,8 @@ pub fn run(args: Args) -> Result<()> {
             .map_err(|e| anyhow::anyhow!("Failed to parse PBN for PDF: {:?}", e))?;
 
         // Use hand-record style settings for dealing machine output
-        let settings = Settings::default().with_metadata(&pbn_file.metadata);
+        let mut settings = Settings::default().with_metadata(&pbn_file.metadata);
+        settings.page_furniture = !args.no_page_furniture;
 
         let pdf_bytes = generate_pdf(&pbn_file.boards, &settings)
             .map_err(|e| anyhow::anyhow!("Failed to generate PDF: {:?}", e))?;
