@@ -33,6 +33,11 @@ pub struct Args {
     /// Also generate PDFs of the output files
     #[arg(long)]
     pub pdf: bool,
+
+    /// Leave the page furniture (event header or headings, %PageFooter lines)
+    /// out of the PDF. For pipelines that add their own.
+    #[arg(long)]
+    pub no_page_furniture: bool,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -110,7 +115,7 @@ pub fn run(args: Args) -> Result<()> {
 
         // Generate PDF if requested
         if args.pdf && matched_count > 0 {
-            generate_pdf_file(&output_content, &matched_path)?;
+            generate_pdf_file(&output_content, &matched_path, args.no_page_furniture)?;
         }
     }
 
@@ -141,7 +146,7 @@ pub fn run(args: Args) -> Result<()> {
 
         // Generate PDF if requested
         if args.pdf && not_matched_count > 0 {
-            generate_pdf_file(&output_content, &not_matched_path)?;
+            generate_pdf_file(&output_content, &not_matched_path, args.no_page_furniture)?;
         }
     }
 
@@ -157,13 +162,14 @@ pub fn run(args: Args) -> Result<()> {
 }
 
 /// Generate PDF from PBN content and write to file
-fn generate_pdf_file(pbn_content: &str, pbn_path: &Path) -> Result<()> {
+fn generate_pdf_file(pbn_content: &str, pbn_path: &Path, no_page_furniture: bool) -> Result<()> {
     let pdf_path = pbn_path.with_extension("pdf");
 
     let pbn_file = parse_pbn(pbn_content)
         .map_err(|e| anyhow::anyhow!("Failed to parse PBN for PDF: {:?}", e))?;
 
-    let settings = Settings::default().with_metadata(&pbn_file.metadata);
+    let mut settings = Settings::default().with_metadata(&pbn_file.metadata);
+    settings.page_furniture = !no_page_furniture;
 
     let pdf_bytes = generate_pdf(&pbn_file.boards, &settings)
         .map_err(|e| anyhow::anyhow!("Failed to generate PDF: {:?}", e))?;

@@ -64,6 +64,12 @@ pub struct Args {
     /// Circle length winners in blue (declarer's plan layouts; priority 3)
     #[arg(long)]
     pub circle_length_winners: bool,
+
+    /// Leave out the page furniture the PBN asks for -- the event header or
+    /// headings and the %PageFooter lines. For pipelines that add their own;
+    /// without it the output matches BridgeComposer's.
+    #[arg(long)]
+    pub no_page_furniture: bool,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -108,6 +114,7 @@ pub fn run(args: Args) -> Result<()> {
         circle_sure_winners: args.circle_sure_winners,
         circle_promotable_winners: args.circle_promotable_winners,
         circle_length_winners: args.circle_length_winners,
+        omit_page_furniture: args.no_page_furniture,
     };
 
     // Generate PDF using the high-level API
