@@ -64,6 +64,16 @@ pub struct Args {
     /// Circle length winners in blue (declarer's plan layouts; priority 3)
     #[arg(long)]
     pub circle_length_winners: bool,
+
+    /// Draw commentary that stands inside an auction or play section, which
+    /// BridgeComposer leaves out
+    #[arg(long)]
+    pub section_commentary: bool,
+
+    /// Leave out page furniture: the event header or headings and the
+    /// %PageFooter lines. For pipelines that add their own.
+    #[arg(long)]
+    pub no_page_furniture: bool,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -108,6 +118,8 @@ pub fn run(args: Args) -> Result<()> {
         circle_sure_winners: args.circle_sure_winners,
         circle_promotable_winners: args.circle_promotable_winners,
         circle_length_winners: args.circle_length_winners,
+        section_commentary: args.section_commentary,
+        omit_page_furniture: args.no_page_furniture,
     };
 
     // Generate PDF using the high-level API
