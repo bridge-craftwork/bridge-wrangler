@@ -1,5 +1,5 @@
 #!/bin/bash
-# Integration test: Generate all rotations and PDFs from ABS2-2.pbn
+# Integration test: Generate all rotations, PDFs and LIN from ABS2-2.pbn
 
 set -e
 
@@ -19,7 +19,7 @@ BINARY="$PROJECT_DIR/target/release/bridge-wrangler"
 
 # Clean output directory
 echo "Cleaning output directory..."
-rm -f "$OUTPUT_DIR"/*.pbn "$OUTPUT_DIR"/*.pdf
+rm -f "$OUTPUT_DIR"/*.pbn "$OUTPUT_DIR"/*.pdf "$OUTPUT_DIR"/*.lin
 
 # Run rotate-deals with all patterns
 echo ""
@@ -49,6 +49,16 @@ done
 # Also generate a PDF from the original (unrotated) file
 echo "Generating PDF for original (unrotated)..."
 "$BINARY" to-pdf -i "$INPUT_FILE" -o "$OUTPUT_DIR/ABS2-2 - Original.pdf"
+
+# Generate LIN for each rotation, to set beside Bridge Composer's exports in
+# fixtures/expected (those carry a tournament header this writer omits)
+echo ""
+echo "=== Generating LIN ==="
+
+for pattern in S NS NES NESW; do
+    echo "Generating LIN for $pattern pattern..."
+    "$BINARY" to-lin -i "$OUTPUT_DIR/ABS2-2 - $pattern.pbn" -o "$OUTPUT_DIR/ABS2-2 - $pattern.lin"
+done
 
 # Summary
 echo ""

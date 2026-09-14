@@ -178,13 +178,26 @@ bridge-wrangler to-lin --input <FILE> [OPTIONS]
 
 #### Output Format
 
-Each board is encoded on a single line containing:
-- `pn|S,W,N,E|` - Player names (South, West, North, East order)
-- `md|dealer+hands|` - Dealer digit (1=S, 2=W, 3=N, 4=E) + hands in S,W,N order
-- `sv|v|` - Vulnerability (o=none, n=NS, e=EW, b=both)
-- `ah|Board N|` - Board header
-- `mb|bid|` - Each bid in the auction
-- `pc|card|` - Each card played
+Each board is written the way Bridge Composer exports LIN, using the LIN writer in [bridge-encodings](https://github.com/bridge-craftwork/bridge-encodings):
+
+```
+mn|Event - Date|pn|S,W,N,E|qx|o1,BOARD 1|rh||ah|Board 1|md|3<S>,<W>,<N>|sv|n|
+sa|0|mb|p|mb|1C|an|!|mb|p|mb|1H|an|<note text>|...|pg||
+pc|D2|pc|D3|pc|DJ|pc|DQ|pg||
+pc|CA|pc|C5|pc|CK|pc|C3|pg||
+mc|9|pg||
+```
+
+- `mn` - Title: `Event - Date`
+- `pn` - Player names in South, West, North, East order
+- `qx`, `ah` - Board id as written in `[Board]`, so ids such as `1-1` are kept
+- `md` - Dealer digit (1=S, 2=W, 3=N, 4=E), then the South, West and North hands
+- `sv` - Vulnerability (0=none, n=NS, e=EW, b=both)
+- `mb` - Calls (`p`, `d`, `r`, `1C` … `7N`). A `!` or `$1` on a call becomes `an|!|`, `$2` becomes `an|?|`, and a `=n=` note reference becomes the note's text
+- `pc` - The play, one line per trick, in the order the cards were played
+- `mc` - Tricks taken, from `[Result]`; omitted when there is no result
+
+Line endings are LF. No tournament header (`vg`, `rs`, `pw`, `mp`, `bn`) is written. A `|` in any text becomes `/`, and a comma in a player name is dropped, so neither can break the record.
 
 #### Examples
 
