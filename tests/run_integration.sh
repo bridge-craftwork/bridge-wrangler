@@ -11,7 +11,9 @@ OUTPUT_DIR="$SCRIPT_DIR/fixtures/output"
 # Build the project first
 echo "Building bridge-wrangler..."
 cd "$PROJECT_DIR"
-cargo build --release
+# CI-parity build: never bare cargo, which would apply local [patch] overrides
+# and rewrite Cargo.lock (see CLAUDE.md).
+./dev-build.sh --ci build --release
 
 BINARY="$PROJECT_DIR/target/release/bridge-wrangler"
 

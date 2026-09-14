@@ -120,18 +120,21 @@ bridge-wrangler to-pdf --input <FILE> [OPTIONS]
 | `--input <FILE>` | `-i` | Input PBN file (required) | - |
 | `--output <FILE>` | `-o` | Output PDF file | `<input>.pdf` |
 | `--layout <LAYOUT>` | `-l` | Layout style (see below) | `analysis` |
-| `--boards-per-page <N>` | `-b` | Boards per page (1, 2, or 4) | varies by layout |
 | `--board-range <RANGE>` | `-r` | Board range to include | all boards |
-| `--hide-bidding` | - | Hide bidding information | off |
-| `--hide-play` | - | Hide play sequence | off |
-| `--hide-commentary` | - | Hide commentary | off |
-| `--show-hcp` | - | Show high card points | off |
+| `--circle-sure-winners` | - | Circle sure winners in red (declarer's plan layouts) | off |
+| `--circle-promotable-winners` | - | Circle promotable winners in green (declarer's plan layouts) | off |
+| `--circle-length-winners` | - | Circle length winners in blue (declarer's plan layouts) | off |
+| `--section-commentary` | - | Draw commentary written inside `[Auction]` or `[Play]`, which BridgeComposer leaves out | off |
+| `--no-page-furniture` | - | Leave out the event header or headings and the `%PageFooter` lines, for pipelines that add their own | off |
 
 #### Layouts
 
 - `analysis` - Full hand diagram with bidding table and commentary (default)
 - `bidding-sheets` - Simplified layout for practice bidding
-- `declarers-plan` - 4 deals per page for declarer's planning practice
+- `declarers-plan-1up` - Declarer's plan, 1 deal per page (full size)
+- `declarers-plan-2up` - Declarer's plan, 2 deals per page (rotated 90°)
+- `declarers-plan` - Declarer's plan practice sheets, 4 deals per page
+- `dealer-summary` - 6 deals per page summary for the dealer
 
 #### Board Range
 
