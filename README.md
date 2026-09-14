@@ -119,7 +119,7 @@ bridge-wrangler to-pdf --input <FILE> [OPTIONS]
 |--------|-------|-------------|---------|
 | `--input <FILE>` | `-i` | Input PBN file (required) | - |
 | `--output <FILE>` | `-o` | Output PDF file | `<input>.pdf` |
-| `--layout <LAYOUT>` | `-l` | Layout style (see below) | `analysis` |
+| `--layout <LAYOUT>` | `-l` | Layout style (see below) | `hand-record` for a file with `%BoardsPerPage 18`, otherwise `analysis` |
 | `--board-range <RANGE>` | `-r` | Board range to include | all boards |
 | `--circle-sure-winners` | - | Circle sure winners in red (declarer's plan layouts) | off |
 | `--circle-promotable-winners` | - | Circle promotable winners in green (declarer's plan layouts) | off |
@@ -135,6 +135,7 @@ bridge-wrangler to-pdf --input <FILE> [OPTIONS]
 - `declarers-plan-2up` - Declarer's plan, 2 deals per page (rotated 90°)
 - `declarers-plan` - Declarer's plan practice sheets, 4 deals per page
 - `dealer-summary` - 6 deals per page summary for the dealer
+- `hand-record` - Compact hand record, 18 boards per page with hands and HCP only (chosen automatically for a file with `%BoardsPerPage 18` when `--layout` is omitted)
 
 #### Board Range
 
