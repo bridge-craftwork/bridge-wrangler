@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use clap::{Args as ClapArgs, ValueEnum};
-use pbn_to_pdf::{parse_pbn, render_boards, Layout as PdfLayout, RenderOptions};
+use pbn_to_pdf::{
+    model::PbnMetadata, parse_pbn, render_boards, Layout as PdfLayout, RenderOptions,
+};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, ValueEnum, Default)]
@@ -20,6 +22,8 @@ pub enum Layout {
     DeclarersPlan,
     /// 6 deals per page summary for the dealer
     DealerSummary,
+    /// Hand record: compact boards, 18 per page, hands and HCP only
+    HandRecord,
 }
 
 impl From<Layout> for PdfLayout {
@@ -31,6 +35,7 @@ impl From<Layout> for PdfLayout {
             Layout::DeclarersPlan2up => PdfLayout::DeclarersPlan2up,
             Layout::DeclarersPlan => PdfLayout::DeclarersPlan,
             Layout::DealerSummary => PdfLayout::DealerSummary,
+            Layout::HandRecord => PdfLayout::HandRecord,
         }
     }
 }
@@ -45,9 +50,10 @@ pub struct Args {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Layout style
-    #[arg(short, long, value_enum, default_value = "analysis")]
-    pub layout: Layout,
+    /// Layout style [default: hand-record for a file with %BoardsPerPage 18,
+    /// otherwise analysis]
+    #[arg(short, long, value_enum)]
+    pub layout: Option<Layout>,
 
     /// Board range to include (e.g., "1-4" or "1,3,5")
     #[arg(short = 'r', long)]
@@ -98,6 +104,8 @@ pub fn run(args: Args) -> Result<()> {
         args.input.display()
     );
 
+    let layout = choose_layout(args.layout, &pbn_file.metadata);
+
     // Filter boards if range specified
     let boards = if let Some(ref range) = args.board_range {
         let allowed = parse_board_range(range)?;
@@ -123,7 +131,7 @@ pub fn run(args: Args) -> Result<()> {
     };
 
     // Generate PDF using the high-level API
-    let pdf_bytes = render_boards(&boards, &metadata_comments, args.layout.into(), options)
+    let pdf_bytes = render_boards(&boards, &metadata_comments, layout, options)
         .map_err(|e| anyhow::anyhow!("Failed to generate PDF: {:?}", e))?;
 
     // Determine output path
@@ -138,6 +146,13 @@ pub fn run(args: Args) -> Result<()> {
     println!("Wrote {} boards to {}", boards.len(), output_path.display());
 
     Ok(())
+}
+
+/// The layout to render: the one asked for, or else the one the file's metadata
+/// calls for, as pbn-to-pdf chooses it (a hand record for `%BoardsPerPage 18`,
+/// otherwise analysis).
+fn choose_layout(requested: Option<Layout>, metadata: &PbnMetadata) -> PdfLayout {
+    requested.map_or_else(|| PdfLayout::default_for(metadata), PdfLayout::from)
 }
 
 /// Parse a board range specification like "1-4" or "1,3,5" or "1-4,7,9-12"
@@ -183,5 +198,28 @@ mod tests {
         assert_eq!(parse_board_range("1,3,5").unwrap(), vec![1, 3, 5]);
         assert_eq!(parse_board_range("1-3,7").unwrap(), vec![1, 2, 3, 7]);
         assert_eq!(parse_board_range("1").unwrap(), vec![1]);
+    }
+
+    fn metadata_for(header: &str) -> PbnMetadata {
+        let pbn = format!(
+            "{header}\n[Board \"1\"]\n[Dealer \"N\"]\n[Vulnerable \"None\"]\n\
+             [Deal \"N:K843.T542.J6.863 AQJ7.K.Q75.AT942 962.AJ7.KT82.J75 T5.Q9863.A943.KQ\"]\n"
+        );
+        parse_pbn(&pbn).unwrap().metadata
+    }
+
+    #[test]
+    fn test_choose_layout() {
+        let hand_record = metadata_for("%BoardsPerPage 18");
+        assert_eq!(choose_layout(None, &hand_record), PdfLayout::HandRecord);
+        assert_eq!(
+            choose_layout(Some(Layout::Analysis), &hand_record),
+            PdfLayout::Analysis
+        );
+
+        // A multi-column file and one without the directive are analysis.
+        let columns = metadata_for("%BoardsPerPage fit,18");
+        assert_eq!(choose_layout(None, &columns), PdfLayout::Analysis);
+        assert_eq!(choose_layout(None, &metadata_for("")), PdfLayout::Analysis);
     }
 }
