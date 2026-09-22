@@ -322,7 +322,7 @@ source = "git+https://github.com/bridge-craftwork/bridge-types#0206ec5ec9003d7b5
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "anyhow",
  "bridge-encodings",
