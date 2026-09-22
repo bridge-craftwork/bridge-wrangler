@@ -57,6 +57,16 @@ bridge-wrangler rotate-deals -i deals.pbn -p "S,NS,NESW"
 # Creates: deals - S.pbn, deals - NS.pbn, deals - NESW.pbn
 ```
 
+#### What rotates with the hands
+
+Moving the hands around the table moves everything that names a seat with them:
+`Dealer`, `Vulnerable`, `Deal`, `Auction`, `Play`, `Declarer`, the side in a
+`Score` or `OptimumScore`, the direction words in `{...}` commentary, and the
+`Declarer` column of an `[OptimumResultTable]`. A double-dummy table says what
+each seat can make, so an unrotated one would describe seats that no longer hold
+those cards; rotating an analyzed file and re-analyzing it give the same table.
+The table's rows keep the order the file listed them in.
+
 #### Basis Options
 
 The basis determines how the tool identifies the current orientation of each board:

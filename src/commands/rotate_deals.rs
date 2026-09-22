@@ -415,6 +415,110 @@ fn rotate_score_value(value: &str, rotation: u8) -> String {
     }
 }
 
+/// The index of the `Declarer` column in a table section's header value, or
+/// `None` if the section does not name one.
+///
+/// The header lists its columns separated by `;`, each optionally carrying a
+/// format specifier after a `\` — `Declarer;Denomination\2R;Result\1R` (PBN 2.1
+/// §3.7). Only the column name matters here.
+fn declarer_column(header: &str) -> Option<usize> {
+    header
+        .split(';')
+        .position(|column| column.split('\\').next().unwrap_or("").trim() == "Declarer")
+}
+
+/// Rotate the `Declarer` column of a table section's data rows.
+///
+/// The rows of an `[OptimumResultTable]` say what each seat can make. Rotating
+/// the board moves the hands around the table, so a row that described North
+/// now describes whichever seat those cards landed in, and the labels have to
+/// move with them.
+///
+/// The file's own row order is kept: rows are relabelled and then regrouped so
+/// the groups still appear in the order the source listed them, which for an
+/// `analyze` table is N, S, E, W. Relabelling in place would leave a file whose
+/// groups run in a rotated order instead.
+///
+/// Rows are returned unchanged if any of them is missing the declarer column or
+/// has something other than a direction in it, since a partial rotation would
+/// be worse than none.
+fn rotate_dd_rows(rows: &[String], declarer_col: usize, rotation: u8) -> Vec<String> {
+    if rotation == 0 {
+        return rows.to_vec();
+    }
+
+    // Relabel each row, keeping its text and spacing otherwise intact.
+    let mut relabelled: Vec<(char, String)> = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Some((offset, field)) = row_field(row, declarer_col) else {
+            return rows.to_vec();
+        };
+        let Some(dir) = (field.len() == 1)
+            .then(|| field.chars().next())
+            .flatten()
+            .and_then(Direction::from_char)
+        else {
+            return rows.to_vec();
+        };
+        let new_label = rotate_direction(dir, rotation).to_char();
+        let mut rotated = row.clone();
+        rotated.replace_range(offset..offset + field.len(), &new_label.to_string());
+        relabelled.push((new_label, rotated));
+    }
+
+    // The order the source listed its declarers in, to be kept.
+    let mut label_order: Vec<char> = Vec::new();
+    for row in rows {
+        if let Some((_, field)) = row_field(row, declarer_col) {
+            if let Some(c) = field.chars().next() {
+                if !label_order.contains(&c) {
+                    label_order.push(c);
+                }
+            }
+        }
+    }
+
+    let mut out = Vec::with_capacity(relabelled.len());
+    for label in &label_order {
+        for (row_label, text) in &relabelled {
+            if row_label == label {
+                out.push(text.clone());
+            }
+        }
+    }
+
+    // Any row whose new label was not among the originals (a table listing only
+    // some seats) still has to be written, after the groups that were ordered.
+    for (row_label, text) in &relabelled {
+        if !label_order.contains(row_label) {
+            out.push(text.clone());
+        }
+    }
+
+    out
+}
+
+/// One whitespace-separated field of a table row, with its byte offset, so a
+/// field can be replaced without disturbing the row's spacing.
+fn row_field(row: &str, index: usize) -> Option<(usize, &str)> {
+    let mut fields = Vec::new();
+    let mut start = None;
+    for (offset, c) in row.char_indices() {
+        match (c.is_whitespace(), start) {
+            (false, None) => start = Some(offset),
+            (true, Some(from)) => {
+                fields.push((from, &row[from..offset]));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(from) = start {
+        fields.push((from, &row[from..]));
+    }
+    fields.get(index).copied()
+}
+
 /// Rotate direction words in commentary text
 fn rotate_commentary(text: &str, rotation: u8) -> String {
     if rotation == 0 {
@@ -495,8 +599,30 @@ fn write_rotated_pbn(
         })
         .unwrap_or_default();
 
+    // The data rows of an [OptimumResultTable], held until the section ends so
+    // the whole table can be rotated at once: declarer column, the board's
+    // rotation, and the rows as read.
+    let mut dd_section: Option<(usize, u8, Vec<String>)> = None;
+
     for line in original_content.lines() {
         let trimmed = line.trim();
+
+        // A table section's data rows run until the next tag, commentary,
+        // directive or blank line.
+        if dd_section.is_some() {
+            let is_row = !trimmed.is_empty()
+                && !trimmed.starts_with('[')
+                && !trimmed.starts_with('{')
+                && !trimmed.starts_with('%')
+                && !trimmed.starts_with(';');
+            if is_row {
+                if let Some((_, _, rows)) = dd_section.as_mut() {
+                    rows.push(line.to_string());
+                }
+                continue;
+            }
+            flush_dd_section(&mut output, &mut dd_section);
+        }
 
         // Track commentary blocks
         if trimmed.starts_with('{') && !trimmed.ends_with('}') {
@@ -633,6 +759,19 @@ fn write_rotated_pbn(
                         let rotated_value = rotate_score_value(tag_value, rotation);
                         format!("[Score \"{}\"]", rotated_value)
                     }
+                    "OptimumScore" => {
+                        // An NS/EW value, like Score.
+                        let rotated_value = rotate_score_value(tag_value, rotation);
+                        format!("[OptimumScore \"{}\"]", rotated_value)
+                    }
+                    "OptimumResultTable" => {
+                        // The header is unchanged; its rows are gathered and
+                        // rotated together once the section ends.
+                        if let Some(column) = declarer_column(tag_value) {
+                            dd_section = Some((column, rotation, Vec::new()));
+                        }
+                        line.to_string()
+                    }
                     "BCFlags" => {
                         // Output BCFlags, then add RotationNote
                         output.push_str(line);
@@ -659,7 +798,20 @@ fn write_rotated_pbn(
         }
     }
 
+    // A table that ran to the end of the file without a blank line after it.
+    flush_dd_section(&mut output, &mut dd_section);
+
     Ok(output)
+}
+
+/// Write out a gathered `[OptimumResultTable]`, rotated, and clear it.
+fn flush_dd_section(output: &mut String, section: &mut Option<(usize, u8, Vec<String>)>) {
+    if let Some((column, rotation, rows)) = section.take() {
+        for row in rotate_dd_rows(&rows, column, rotation) {
+            output.push_str(&row);
+            output.push('\n');
+        }
+    }
 }
 
 #[cfg(test)]
@@ -707,6 +859,73 @@ mod tests {
         assert_eq!(rotate_score_value("NS 420", 1), "EW 420");
         assert_eq!(rotate_score_value("NS 420", 2), "NS 420");
         assert_eq!(rotate_score_value("EW -100", 1), "NS -100");
+    }
+
+    #[test]
+    fn declarer_column_reads_the_header() {
+        assert_eq!(
+            declarer_column("Declarer;Denomination\\2R;Result\\1R"),
+            Some(0)
+        );
+        assert_eq!(
+            declarer_column("Denomination\\2R;Declarer;Result\\2R"),
+            Some(1)
+        );
+        assert_eq!(declarer_column("Denomination;Result"), None);
+    }
+
+    /// A table as `analyze` writes it: five denominations per declarer, in the
+    /// order N, S, E, W.
+    fn dd_table(n: u8, s: u8, e: u8, w: u8) -> Vec<String> {
+        ['N', 'S', 'E', 'W']
+            .iter()
+            .zip([n, s, e, w])
+            .flat_map(|(seat, tricks)| {
+                ["NT", " S", " H", " D", " C"]
+                    .iter()
+                    .map(move |denom| format!("{} {} {:2}", seat, denom, tricks))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_dd_table_follows_the_hands_around_the_table() {
+        // North's cards move to East on a rotation of 1, so the tricks North
+        // could take are now East's.
+        let rotated = rotate_dd_rows(&dd_table(7, 7, 6, 6), 0, 1);
+        assert_eq!(rotated, dd_table(6, 6, 7, 7));
+
+        // And the row order is the file's own, still N, S, E, W.
+        let seats: Vec<&str> = rotated.iter().map(|row| &row[0..1]).collect();
+        assert_eq!(seats[0], "N");
+        assert_eq!(seats[5], "S");
+        assert_eq!(seats[10], "E");
+        assert_eq!(seats[15], "W");
+    }
+
+    #[test]
+    fn a_half_turn_swaps_the_partners_and_a_full_turn_changes_nothing() {
+        assert_eq!(
+            rotate_dd_rows(&dd_table(7, 5, 6, 4), 0, 2),
+            dd_table(5, 7, 4, 6)
+        );
+        assert_eq!(
+            rotate_dd_rows(&dd_table(7, 5, 6, 4), 0, 0),
+            dd_table(7, 5, 6, 4)
+        );
+    }
+
+    #[test]
+    fn a_dd_row_keeps_its_spacing_and_its_other_columns() {
+        let rows = vec!["N NT 10".to_string(), "N  S  9".to_string()];
+        let rotated = rotate_dd_rows(&rows, 0, 1);
+        assert_eq!(rotated, vec!["E NT 10".to_string(), "E  S  9".to_string()]);
+    }
+
+    #[test]
+    fn rows_that_do_not_name_a_seat_are_left_alone() {
+        let rows = vec!["N NT 10".to_string(), "? NT 10".to_string()];
+        assert_eq!(rotate_dd_rows(&rows, 0, 1), rows);
     }
 
     #[test]
