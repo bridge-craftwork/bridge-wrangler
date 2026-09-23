@@ -1,4 +1,3 @@
-pub mod analyze;
 pub mod block_replicate;
 pub mod event;
 pub mod filter;

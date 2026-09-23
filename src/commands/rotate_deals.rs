@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
-use bridge_encodings::pbn::read_pbn;
-use bridge_types::{Board, Direction, Vulnerability};
+use bridge_encodings::pbn::{dd_table_from_pbn, dd_table_to_pbn, read_pbn};
+use bridge_types::{Board, DdTable, Direction, Vulnerability};
 use clap::{Args as ClapArgs, ValueEnum};
 use regex::Regex;
 use std::collections::HashMap;
@@ -415,6 +415,63 @@ fn rotate_score_value(value: &str, rotation: u8) -> String {
     }
 }
 
+/// Rotate a `DoubleDummyTricks` value: the same table an `OptimumResultTable`
+/// holds, written as twenty characters in a fixed declarer-and-strain order.
+///
+/// Because the seats are positions rather than labels here, rotating means
+/// moving each cell to the seat the hand went to, then writing the table out
+/// again. Decoding and re-encoding through `bridge_encodings` keeps this one
+/// definition of the order; reshuffling the characters by hand would make a
+/// second.
+///
+/// A value that does not decode is left as it stands: a rotation is not the
+/// place to reject a file's other contents.
+fn rotate_double_dummy_tricks(value: &str, rotation: u8) -> String {
+    if rotation == 0 {
+        return value.to_string();
+    }
+
+    let Ok(table) = dd_table_from_pbn(value) else {
+        return value.to_string();
+    };
+
+    let mut rotated = DdTable::new();
+    for (declarer, strain, tricks) in table.cells() {
+        rotated.set(rotate_direction(declarer, rotation), strain, tricks);
+    }
+
+    dd_table_to_pbn(&rotated)
+}
+
+/// Rotate a `ParContract` value, such as `NS 4H+1`, `N 3N=` or
+/// `EW 2SX-1; EW 3CX-1`.
+///
+/// Each contract names who declares it before the contract itself: a side when
+/// either partner can take the tricks, a single seat when only one can. Sides
+/// swap on an odd rotation, as a `Score` does; a seat moves with its hand. The
+/// contract itself does not change, only who plays it.
+fn rotate_par_contract(value: &str, rotation: u8) -> String {
+    if rotation == 0 {
+        return value.to_string();
+    }
+
+    value
+        .split("; ")
+        .map(|contract| {
+            let Some((declarer, rest)) = contract.split_once(' ') else {
+                return contract.to_string();
+            };
+            let moved = match declarer {
+                "NS" | "EW" => rotate_score_value(declarer, rotation),
+                seat if seat.len() == 1 => rotate_direction_value(seat, rotation),
+                _ => return contract.to_string(),
+            };
+            format!("{} {}", moved, rest)
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
 /// The index of the `Declarer` column in a table section's header value, or
 /// `None` if the section does not name one.
 ///
@@ -759,6 +816,14 @@ fn write_rotated_pbn(
                         let rotated_value = rotate_score_value(tag_value, rotation);
                         format!("[Score \"{}\"]", rotated_value)
                     }
+                    "DoubleDummyTricks" => {
+                        let rotated_value = rotate_double_dummy_tricks(tag_value, rotation);
+                        format!("[DoubleDummyTricks \"{}\"]", rotated_value)
+                    }
+                    "ParContract" => {
+                        let rotated_value = rotate_par_contract(tag_value, rotation);
+                        format!("[ParContract \"{}\"]", rotated_value)
+                    }
                     "OptimumScore" => {
                         // An NS/EW value, like Score.
                         let rotated_value = rotate_score_value(tag_value, rotation);
@@ -817,6 +882,7 @@ fn flush_dd_section(output: &mut String, section: &mut Option<(usize, u8, Vec<St
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bridge_types::Strain;
 
     #[test]
     fn test_parse_pattern() {
@@ -859,6 +925,83 @@ mod tests {
         assert_eq!(rotate_score_value("NS 420", 1), "EW 420");
         assert_eq!(rotate_score_value("NS 420", 2), "NS 420");
         assert_eq!(rotate_score_value("EW -100", 1), "NS -100");
+    }
+
+    #[test]
+    fn a_double_dummy_tricks_tag_follows_the_hands_too() {
+        // The same table as an OptimumResultTable, positionally encoded, so it
+        // has to move exactly as the section's rows do.
+        let table = DdTable::from_fn(|declarer, strain| match (declarer, strain) {
+            (Direction::North, Strain::NoTrump) => 10,
+            (Direction::North, _) => 9,
+            _ => 4,
+        });
+        let encoded = dd_table_to_pbn(&table);
+
+        let rotated = dd_table_from_pbn(&rotate_double_dummy_tricks(&encoded, 1)).unwrap();
+        assert_eq!(rotated.tricks(Direction::East, Strain::NoTrump), 10);
+        assert_eq!(rotated.tricks(Direction::North, Strain::NoTrump), 4);
+
+        // A full turn is the identity, and the two encodings agree.
+        assert_eq!(rotate_double_dummy_tricks(&encoded, 0), encoded);
+        let twice = rotate_double_dummy_tricks(&rotate_double_dummy_tricks(&encoded, 1), 3);
+        assert_eq!(twice, encoded);
+    }
+
+    #[test]
+    fn a_double_dummy_tricks_tag_and_its_table_stay_in_step() {
+        // The invariant that matters: whatever the section says a seat makes,
+        // the packed tag says the same after the same rotation.
+        let table = DdTable::from_fn(|declarer, strain| match (declarer, strain) {
+            (Direction::North, Strain::NoTrump) => 11,
+            (Direction::South, Strain::NoTrump) => 11,
+            (Direction::West, Strain::Spades) => 7,
+            _ => 5,
+        });
+        let rows: Vec<String> = table
+            .cells()
+            .map(|(declarer, strain, tricks)| {
+                format!("{} {} {}", declarer.to_char(), strain.to_char(), tricks)
+            })
+            .collect();
+
+        for rotation in 1..=3 {
+            let packed = dd_table_from_pbn(&rotate_double_dummy_tricks(
+                &dd_table_to_pbn(&table),
+                rotation,
+            ))
+            .unwrap();
+            for row in rotate_dd_rows(&rows, 0, rotation) {
+                let fields: Vec<&str> = row.split_whitespace().collect();
+                let seat = Direction::from_char(fields[0].chars().next().unwrap()).unwrap();
+                let strain = Strain::from_str(fields[1]).unwrap();
+                assert_eq!(
+                    packed.tricks(seat, strain),
+                    fields[2].parse::<u8>().unwrap(),
+                    "rotation {rotation}, row {row}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_par_contract_names_who_plays_it_after_the_rotation() {
+        // A side swaps on an odd rotation, as a Score does.
+        assert_eq!(rotate_par_contract("NS 4H+1", 1), "EW 4H+1");
+        assert_eq!(rotate_par_contract("NS 4H+1", 2), "NS 4H+1");
+        assert_eq!(rotate_par_contract("EW 2SX-1", 3), "NS 2SX-1");
+
+        // A single seat moves with its hand.
+        assert_eq!(rotate_par_contract("N 3N=", 1), "E 3N=");
+        assert_eq!(rotate_par_contract("W 3N=", 2), "E 3N=");
+
+        // Every contract of a tie is rotated, and a passed-out par still reads.
+        assert_eq!(
+            rotate_par_contract("EW 2SX-1; EW 3CX-1", 1),
+            "NS 2SX-1; NS 3CX-1"
+        );
+        assert_eq!(rotate_par_contract("NS Pass", 1), "EW Pass");
+        assert_eq!(rotate_par_contract("NS 4H+1", 0), "NS 4H+1");
     }
 
     #[test]

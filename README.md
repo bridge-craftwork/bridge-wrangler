@@ -17,7 +17,6 @@ The binary will be at `target/release/bridge-wrangler`.
 | [rotate-deals](#rotate-deals) | Rotate deals to set dealer/declarer according to a pattern |
 | [to-pdf](#to-pdf) | Convert PBN file to PDF with various layouts |
 | [to-lin](#to-lin) | Convert PBN file to LIN format (Bridge Base Online) |
-| [analyze](#analyze) | Perform double-dummy analysis on deals |
 | [block-replicate](#block-replicate) | Replicate boards into blocks for multi-table play |
 | [filter](#filter) | Filter boards by regex pattern |
 | [event](#event) | Update the Event tag for all boards |
@@ -61,11 +60,16 @@ bridge-wrangler rotate-deals -i deals.pbn -p "S,NS,NESW"
 
 Moving the hands around the table moves everything that names a seat with them:
 `Dealer`, `Vulnerable`, `Deal`, `Auction`, `Play`, `Declarer`, the side in a
-`Score` or `OptimumScore`, the direction words in `{...}` commentary, and the
-`Declarer` column of an `[OptimumResultTable]`. A double-dummy table says what
-each seat can make, so an unrotated one would describe seats that no longer hold
-those cards; rotating an analyzed file and re-analyzing it give the same table.
-The table's rows keep the order the file listed them in.
+`Score` or `OptimumScore`, the direction words in `{...}` commentary, and all
+four of a board's double-dummy tags — the `Declarer` column of an
+`[OptimumResultTable]`, the positionally encoded `[DoubleDummyTricks]`, and the
+seat or side declaring each contract in a `[ParContract]`.
+
+A double-dummy table says what each seat can make, so an unrotated one would
+describe seats that no longer hold those cards. Rotating an annotated file and
+re-analyzing it give the same answers, and the two encodings of the table stay
+in step with each other. The table's rows keep the order the file listed them
+in.
 
 #### Basis Options
 
@@ -223,90 +227,32 @@ Specify output file:
 bridge-wrangler to-lin -i session.pbn -o bbo-upload.lin
 ```
 
-### analyze
+### analyze — removed
 
-Perform double-dummy analysis on deals and optionally add results to PBN files.
+Double-dummy analysis lives in
+[bridge-solver](https://github.com/bridge-craftwork/bridge-solver), whose CLI
+reads and writes the same PBN files through the same `PbnDocument`, and does
+more with them:
 
 ```bash
-bridge-wrangler analyze --input <FILE> [OPTIONS]
+bridge-solver -i hands.pbn -o hands-analyzed.pbn   # one file to another
+bridge-solver -w -i deals/                         # annotate a tree in place
 ```
 
-#### Options
+It writes `[OptimumResultTable]`, `[DoubleDummyTricks]`, `[OptimumScore]` and
+`[ParContract]`, solves across every core (`-j/--threads`, identical bytes at
+any thread count), and by default leaves a board that already carries analysis
+exactly as found, so annotating a collection fills in only what is missing.
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--input <FILE>` | `-i` | Input PBN file (required) | - |
-| `--output <FILE>` | `-o` | Output PBN file with DD results | - |
-| `--board-range <RANGE>` | `-r` | Board range to analyze | all boards |
-| `--verbose` | `-v` | Show DD results table and par scores | off |
+This tool had its own `analyze` until v0.11.0. It solved one board at a time on
+one thread and wrote only the table, which on a 500-deal file was 66 seconds
+against bridge-solver's 9. Keeping a second, slower implementation of someone
+else's job was the whole argument for removing it; the tables the two produced
+were identical.
 
-#### Output
-
-By default, the command runs quietly and only reports progress. Use `-v` to display the DD results table showing tricks for each declarer (N, S, E, W) in each denomination (NT, S, H, D, C):
-
-```
-       NT   S   H   D   C
-  N     7   6   7   6   6
-  S     7   6   7   6   6
-  E     6   6   6   6   6
-  W     6   6   6   6   6
-```
-
-When using `--output`, the results are added to the PBN file as an
-`[OptimumResultTable]` **table section**, the form PBN 2.1 §5.7 defines: a header
-naming the three columns, then one line per cell.
-
-```
-[OptimumResultTable "Declarer;Denomination\2R;Result\1R"]
-N NT  7
-N  S  6
-N  H  7
-N  D  6
-N  C  6
-S NT  7
-...
-W  C  6
-```
-
-Twenty rows, one per (declarer, denomination) pair. An existing
-`[OptimumResultTable]` on a board is replaced, not duplicated, and every other
-byte of the file — `%` directives, `;` comments, `{...}` commentary and tag
-order — is left exactly as it was.
-
-The `Result` column is declared `\1R` when no cell on the board exceeds nine
-tricks, as above, and `\2R` once any cell reaches ten. That is what Bridge
-Composer writes, so annotating a file it produced does not leave a header it
-will rewrite the next time the file is opened and saved.
-
-One caveat, and it is not ours to fix here: Bridge Composer puts
-`[OptimumResultTable]` after `[Auction]` and `[Play]`, with the other
-supplemental *sections*, and `PbnDocument` currently inserts a new one earlier,
-alphabetically among the one-line supplemental tags. A board that already
-carries a table keeps its position, so re-annotating a Bridge Composer file is
-unaffected; only a first annotation of a file that has an auction is placed
-early. See bridge-craftwork/bridge-encodings#13.
-
-#### Examples
-
-Analyze all boards (quiet mode):
-```bash
-bridge-wrangler analyze -i hands.pbn
-```
-
-Analyze and display DD results with par scores:
-```bash
-bridge-wrangler analyze -i hands.pbn -v
-```
-
-Analyze and save results to a new PBN file:
-```bash
-bridge-wrangler analyze -i hands.pbn -o hands-analyzed.pbn
-```
-
-Analyze only boards 1-4:
-```bash
-bridge-wrangler analyze -i hands.pbn -r "1-4" -v
-```
+What stays here is what this tool is for: `rotate-deals` moves a board's
+double-dummy tags with the hands they describe, so an annotated file can be
+rotated without going stale.
 
 ### block-replicate
 
