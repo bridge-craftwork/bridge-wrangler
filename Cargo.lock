@@ -307,26 +307,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "bridge-solver"
-version = "1.0.0"
-source = "git+https://github.com/bridge-craftwork/bridge-solver#15c6e18c79a3be7b65e5b89e05d58b24a27217bc"
-dependencies = [
- "bridge-encodings",
- "bridge-types",
-]
-
-[[package]]
 name = "bridge-types"
 version = "0.1.0"
 source = "git+https://github.com/bridge-craftwork/bridge-types#0206ec5ec9003d7b5d36b7412bf01b66ee0d6868"
 
 [[package]]
 name = "bridge-wrangler"
-version = "0.10.3"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "bridge-encodings",
- "bridge-solver",
  "bridge-types",
  "clap",
  "pbn-to-pdf",

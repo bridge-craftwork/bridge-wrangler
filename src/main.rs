@@ -19,8 +19,6 @@ enum Commands {
     ToPdf(commands::to_pdf::Args),
     /// Convert PBN file to LIN format
     ToLin(commands::to_lin::Args),
-    /// Perform double-dummy analysis on deals
-    Analyze(commands::analyze::Args),
     /// Replicate boards into blocks for multi-table play
     BlockReplicate(commands::block_replicate::Args),
     /// Filter boards by regex pattern
@@ -36,7 +34,6 @@ fn main() -> Result<()> {
         Commands::RotateDeals(args) => commands::rotate_deals::run(args),
         Commands::ToPdf(args) => commands::to_pdf::run(args),
         Commands::ToLin(args) => commands::to_lin::run(args),
-        Commands::Analyze(args) => commands::analyze::run(args),
         Commands::BlockReplicate(args) => commands::block_replicate::run(args),
         Commands::Filter(args) => commands::filter::run(args),
         Commands::Event(args) => commands::event::run(args),
