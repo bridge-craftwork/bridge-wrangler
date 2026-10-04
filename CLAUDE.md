@@ -61,7 +61,7 @@ src/
 
 ## Related Projects
 
-All located at `/Users/rick/Development/GitHub/`:
+All located at `/Volumes/Express2T/Development/GitHub/`:
 
 | Project | Description | Relationship |
 |---------|-------------|--------------|
