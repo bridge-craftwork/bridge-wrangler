@@ -80,6 +80,14 @@ pub struct Args {
     /// %PageFooter lines. For pipelines that add their own.
     #[arg(long)]
     pub no_page_furniture: bool,
+
+    /// Show the HCP box even when the PBN does not ask for it
+    #[arg(long, conflicts_with = "no_hcp")]
+    pub hcp: bool,
+
+    /// Hide the HCP box even when the PBN asks for it with %BCOptions ShowHCP
+    #[arg(long)]
+    pub no_hcp: bool,
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -128,6 +136,7 @@ pub fn run(args: Args) -> Result<()> {
         circle_length_winners: args.circle_length_winners,
         section_commentary: args.section_commentary,
         omit_page_furniture: args.no_page_furniture,
+        hcp_override: hcp_override(args.hcp, args.no_hcp),
     };
 
     // Generate PDF using the high-level API
@@ -153,6 +162,15 @@ pub fn run(args: Args) -> Result<()> {
 /// otherwise analysis).
 fn choose_layout(requested: Option<Layout>, metadata: &PbnMetadata) -> PdfLayout {
     requested.map_or_else(|| PdfLayout::default_for(metadata), PdfLayout::from)
+}
+
+/// What `--hcp` and `--no-hcp` ask for. With neither, the file decides.
+fn hcp_override(hcp: bool, no_hcp: bool) -> Option<bool> {
+    match (hcp, no_hcp) {
+        (true, _) => Some(true),
+        (_, true) => Some(false),
+        _ => None,
+    }
 }
 
 /// Parse a board range specification like "1-4" or "1,3,5" or "1-4,7,9-12"
@@ -206,6 +224,28 @@ mod tests {
              [Deal \"N:K843.T542.J6.863 AQJ7.K.Q75.AT942 962.AJ7.KT82.J75 T5.Q9863.A943.KQ\"]\n"
         );
         parse_pbn(&pbn).unwrap().metadata
+    }
+
+    #[test]
+    fn test_hcp_override() {
+        assert_eq!(hcp_override(false, false), None);
+        assert_eq!(hcp_override(true, false), Some(true));
+        assert_eq!(hcp_override(false, true), Some(false));
+    }
+
+    #[test]
+    fn test_hcp_switches_conflict() {
+        use clap::Parser;
+
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: Args,
+        }
+
+        assert!(Cli::try_parse_from(["t", "-i", "a.pbn", "--hcp", "--no-hcp"]).is_err());
+        let cli = Cli::try_parse_from(["t", "-i", "a.pbn", "--no-hcp"]).unwrap();
+        assert!(cli.args.no_hcp && !cli.args.hcp);
     }
 
     #[test]
