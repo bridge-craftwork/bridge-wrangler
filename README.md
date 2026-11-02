@@ -140,6 +140,8 @@ bridge-wrangler to-pdf --input <FILE> [OPTIONS]
 | `--circle-length-winners` | - | Circle length winners in blue (declarer's plan layouts) | off |
 | `--section-commentary` | - | Draw commentary written inside `[Auction]` or `[Play]`, which BridgeComposer leaves out | off |
 | `--no-page-furniture` | - | Leave out the event header or headings and the `%PageFooter` lines, for pipelines that add their own | off |
+| `--hcp` | - | Show the HCP box even when the PBN does not ask for it | the file decides |
+| `--no-hcp` | - | Hide the HCP box even when the PBN asks for it with `%BCOptions ShowHCP` | the file decides |
 
 #### Layouts
 
